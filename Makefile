@@ -73,7 +73,7 @@ LOCCOUNT = loccount
 TEST_OPTS =
 
 # Test with previous test files not just the test files for the
-# current step. Step 0 and 1 tests are special and not included in
+# current step. Step 0 and 1 tests are special and not inclded in
 # later steps.
 REGRESS =
 
@@ -94,7 +94,8 @@ IMPLS = ada ada.2 awk bash basic bbc-basic c chuck clojure coffee common-lisp cp
 	guile haskell haxe hy io java js jq julia kotlin livescript logo lua make mal \
 	matlab miniMAL nasm nim objc objpascal ocaml perl perl6 php picolisp pike plpgsql \
 	plsql powershell ps python python.2 r racket rexx rpython ruby rust scala scheme skew \
-	swift swift3 swift4 swift5 tcl ts vala vb vhdl vimscript wasm wren yorick xslt zig
+	swift swift3 swift4 swift5 tcl ts vala vb vhdl vimscript wasm wren yorick xslt zig \
+        chris
 
 EXTENSION = .mal
 
@@ -270,7 +271,7 @@ wren_STEP_TO_PROG =          impls/wren/$($(1)).wren
 yorick_STEP_TO_PROG =        impls/yorick/$($(1)).i
 xslt_STEP_TO_PROG =          impls/xslt/$($(1))
 zig_STEP_TO_PROG =           impls/zig/$($(1))
-
+chris_STEP_TO_PROG =         impls/chris/$($(1))
 #
 # General settings and utility functions
 #
