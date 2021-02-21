@@ -1,6 +1,8 @@
 
 DEBUG?=1
 
+CC:=g++
+
 ifeq ($(DEBUG), 1)
     OPT_FLAGS:=-O0 -g
 else
