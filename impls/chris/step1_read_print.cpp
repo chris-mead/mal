@@ -164,7 +164,6 @@ private:
 
         Token minus()
         {
-            const auto tok_start = pos;
             consume();
             pos--;
             look_ahead = '-';
@@ -185,7 +184,6 @@ private:
         {
             const auto tok_start = pos;
             consume();
-            auto pos_end = pos;
             while(isDigit(lookAhead()))
             {
                 consume();
@@ -198,7 +196,6 @@ private:
         {
             const auto tok_start = pos;
             consume();
-            auto pos_end = pos;
             while(!isSymEnd(lookAhead()))
             {
                 consume();
@@ -212,7 +209,6 @@ private:
         {
             const auto tok_start = pos;
             consume();
-            auto pos_end = pos;
             bool escaped {false};
             while(escaped || !isStringDelim(lookAhead()))
             {

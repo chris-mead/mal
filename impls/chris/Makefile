@@ -9,7 +9,9 @@ else
     OPT_FLAGS:=-O2
 endif
 
-CFLAGS:=$(OPT_FLAGS) --std=c++17
+WARNFLAGS:=-Wall -Wextra -Wextra -pedantic
+
+CFLAGS:=$(OPT_FLAGS) --std=c++17 $(WARNFLAGS)
 
 #STEPS_SRC:=$(wildcard step*.cpp)
 #STEPS:=$(STEPS_SRC:%.cpp:=%)
