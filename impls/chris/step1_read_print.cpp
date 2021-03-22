@@ -18,6 +18,10 @@ enum class TokenKind
 {
     LPAREN,
     RPAREN,
+    LBRACKET,
+    RBRACKET,
+    LBRACE,
+    RBRACE,
     SYM,
     NUMBER,
     STRING,
@@ -32,17 +36,16 @@ public:
     std::string text;
     size_t pos; // In the parent string
 
-    Token() : kind{TokenKind::INVALID}
+    Token() :
+        kind {TokenKind::INVALID}
     {
-
     }
 
     Token(TokenKind kind_, std::string_view text_, size_t pos_) :
-        kind{kind_},
-        text{text_},
-        pos{pos_}
+        kind {kind_},
+        text {text_},
+        pos {pos_}
     {
-
     }
 };
 
@@ -54,6 +57,11 @@ using TokenStream = std::vector<Token>;
 inline bool isWS(lex_char_t c)
 {
     return std::isspace(c) || c == ',';
+}
+
+inline bool isLineCommentDelim(lex_char_t c)
+{
+    return c == ';';
 }
 
 inline bool isMinus(lex_char_t c)
@@ -79,12 +87,11 @@ inline bool isStringDelim(lex_char_t c)
 class Lexer
 {
 private:
-
     class LexerState
     {
         std::string_view text;
-        std::size_t pos{0};
-        lex_char_t look_ahead{LEX_EOF};
+        std::size_t pos {0};
+        lex_char_t look_ahead {LEX_EOF};
 
         lex_char_t peek() const
         {
@@ -93,9 +100,9 @@ private:
 
     public:
         LexerState(std::string_view text_) :
-            text{text_}
+            text {text_}
         {
-            if (!text_.empty())
+            if(!text_.empty())
                 look_ahead = text[pos];
         }
 
@@ -107,7 +114,7 @@ private:
         void consume()
         {
             ++pos;
-            if (pos < text.length())
+            if(pos < text.length())
                 look_ahead = text[pos];
             else
                 look_ahead = LEX_EOF;
@@ -115,14 +122,42 @@ private:
 
         Token lparen()
         {
-            Token tok{TokenKind::LPAREN, "(", pos};
+            Token tok {TokenKind::LPAREN, "(", pos};
             consume();
             return tok;
         }
 
         Token rparen()
         {
-            Token tok{TokenKind::RPAREN, ")", pos};
+            Token tok {TokenKind::RPAREN, ")", pos};
+            consume();
+            return tok;
+        }
+
+        Token lbracket()
+        {
+            Token tok {TokenKind::LBRACKET, "[", pos};
+            consume();
+            return tok;
+        }
+
+        Token rbracket()
+        {
+            Token tok {TokenKind::RBRACKET, "]", pos};
+            consume();
+            return tok;
+        }
+
+        Token lbrace()
+        {
+            Token tok {TokenKind::LBRACE, "{", pos};
+            consume();
+            return tok;
+        }
+
+        Token rbrace()
+        {
+            Token tok {TokenKind::RBRACE, "}", pos};
             consume();
             return tok;
         }
@@ -134,7 +169,7 @@ private:
             pos--;
             look_ahead = '-';
 
-            if (isDigit(lookAhead()))
+            if(isDigit(lookAhead()))
             {
                 return number();
             }
@@ -151,12 +186,12 @@ private:
             const auto tok_start = pos;
             consume();
             auto pos_end = pos;
-            while (isDigit(lookAhead()))
+            while(isDigit(lookAhead()))
             {
                 consume();
             }
             std::string_view tok_text = text.substr(tok_start, pos - tok_start);
-            return Token{TokenKind::NUMBER, tok_text, tok_start};
+            return Token {TokenKind::NUMBER, tok_text, tok_start};
         }
 
         Token symbol()
@@ -164,13 +199,13 @@ private:
             const auto tok_start = pos;
             consume();
             auto pos_end = pos;
-            while (!isSymEnd(lookAhead()))
+            while(!isSymEnd(lookAhead()))
             {
                 consume();
             }
             // TODO: this _might_ be a keyword... in which case we need to promote it
             std::string_view tok_text = text.substr(tok_start, pos - tok_start);
-            return Token{TokenKind::SYM, tok_text, tok_start};
+            return Token {TokenKind::SYM, tok_text, tok_start};
         }
 
         Token string()
@@ -178,72 +213,113 @@ private:
             const auto tok_start = pos;
             consume();
             auto pos_end = pos;
-            bool escaped{false};
-            while (escaped || !isStringDelim(lookAhead()) /*&& !lookAhead() == LEX_EOF*/)
+            bool escaped {false};
+            while(escaped || !isStringDelim(lookAhead()))
             {
-                if (lookAhead() == LEX_EOF)
+                if(lookAhead() == LEX_EOF)
                 {
                     return Token(TokenKind::INVALID, "EOF in string", tok_start);
                 }
-                if (escaped)
+                if(escaped)
                 {
                     escaped = false;
                 }
                 else
                 {
-                    if (lookAhead() == '\\')
+                    if(lookAhead() == '\\')
                         escaped = true;
                 }
                 consume();
             }
             // Consume the end strng delimiter
             consume();
-            // TODO: this _might_ be a keyword... in which case we need to promote it
+            // TODO: this _might_ be a keyword... in which case we need to promote it?
             std::string_view tok_text = text.substr(tok_start, pos - tok_start);
-            return Token{TokenKind::STRING, tok_text, tok_start};
+            return Token {TokenKind::STRING, tok_text, tok_start};
+        }
+
+        void lineComment()
+        {
+            consume();
+            while(lookAhead() != '\n' && lookAhead() != LEX_EOF)
+            {
+                consume();
+            }
+            // Consume the newline
+            consume();
+            return;
         }
     };
+
 public:
     TokenStream tokenise(std::string line)
     {
-        LexerState state{line};
+        LexerState state {line};
 
         TokenStream result;
 
         bool done = false;
+        bool in_line_comment = false;
         while(!done)
         {
             const auto c = state.lookAhead();
-            switch (c)
+            if(in_line_comment)
+            {
+                if(c == '\n')
+                    in_line_comment = false;
+                state.consume();
+                continue;
+            }
+
+            switch(c)
             {
             case EOF:
                 done = true;
                 break;
-            case '(':
-            {
+            case '(': {
                 result.push_back(state.lparen());
                 break;
             }
-            case ')':
-            {
+            case ')': {
                 result.push_back(state.rparen());
                 break;
             }
+            case '[': {
+                result.push_back(state.lbracket());
+                break;
+            }
+            case ']': {
+                result.push_back(state.rbracket());
+                break;
+            }
+            case '{': {
+                result.push_back(state.lbrace());
+                break;
+            }
+            case '}': {
+                result.push_back(state.rbrace());
+                break;
+            }
             default:
-                if (isWS(c))
+                if(isLineCommentDelim(c))
+                {
+                    state.lineComment();
+                    continue;
+                }
+                if(isWS(c))
                 {
                     state.consume();
                     continue;
                 }
-                if (isMinus(c))
+                if(isMinus(c))
                 {
                     result.push_back(state.minus());
                 }
-                else if (isDigit(c))
+                else if(isDigit(c))
                 {
                     result.push_back(state.number());
                 }
-                else if (isStringDelim(c))
+                else if(isStringDelim(c))
                 {
                     result.push_back(state.string());
                 }
@@ -256,7 +332,7 @@ public:
                 break;
             }
         }
-// We do all this up front, meh
+        // We do all this up front, meh
 
         return result;
     }
@@ -266,9 +342,11 @@ enum class NodeKind
 {
     ROOT,
     ATOM,
-    LIST
+    LIST,
+    VECTOR,
+    HASHMAP
 };
-    
+
 // This will perform terribly... think about allocators
 class TreeNode
 {
@@ -278,23 +356,14 @@ public:
     std::vector<TreeNode> children;
 
     TreeNode() :
-        kind{NodeKind::ROOT}
-    {
-
-    }
-    
-    TreeNode(Token start_token_) :
-        kind{NodeKind::LIST},
-        token{start_token_},
-        children{}
+        kind {NodeKind::ROOT}
     {
     }
 
     TreeNode(NodeKind kind_, Token token_) :
-        kind{kind_},
-        token{token_}
+        kind {kind_},
+        token {token_}
     {
-        assert(kind != NodeKind::LIST);
     }
 
     void appendChild(const TreeNode& node)
@@ -308,19 +377,17 @@ class ParseResult
     std::optional<TreeNode> result;
     std::string error_message;
     // Shut the compiler up
-    Token token{TokenKind::SYM, "", 0};
+    Token token {TokenKind::SYM, "", 0};
 
 public:
-
     ParseResult(std::string error_message_, Token token_) :
-        error_message{error_message_},
-        token{token_}
+        error_message {error_message_},
+        token {token_}
     {
-
     }
 
     ParseResult(TreeNode node_) :
-        result{node_}
+        result {node_}
     {
     }
 
@@ -340,42 +407,67 @@ public:
     }
 };
 
+constexpr bool isStartAggregateDelim(const Token& tok)
+{
+    return tok.kind == TokenKind::LPAREN || tok.kind == TokenKind::LBRACKET || tok.kind == TokenKind::LBRACE;
+}
+
+constexpr bool isEndAggregateDelim(const Token& tok)
+{
+    return tok.kind == TokenKind::RPAREN || tok.kind == TokenKind::RBRACKET || tok.kind == TokenKind::RBRACE;
+}
+
+constexpr NodeKind getAggregateKind(const Token& tok)
+{
+    if(tok.kind == TokenKind::LPAREN || tok.kind == TokenKind::RPAREN)
+        return NodeKind::LIST;
+    else if(tok.kind == TokenKind::LBRACKET || tok.kind == TokenKind::RBRACKET)
+        return NodeKind::VECTOR;
+    else if(tok.kind == TokenKind::LBRACE || tok.kind == TokenKind::RBRACE)
+        return NodeKind::HASHMAP;
+
+    // Should not happen!
+    assert(0);
+    return NodeKind::ROOT;
+}
+
 class Parser
 {
 public:
     ParseResult parse(TokenStream tok_stream)
     {
-        TreeNode root{};
+        TreeNode root {};
         TreeNode* node = &root;
-        
+
         std::stack<TreeNode*> stack;
-        for (const Token& tok: tok_stream)
+        for(const Token& tok : tok_stream)
         {
-            if (tok.kind == TokenKind::INVALID)
+            if(tok.kind == TokenKind::INVALID)
             {
                 return {tok.text, tok};
             }
-            if (tok.kind == TokenKind::LPAREN)
+            if(isStartAggregateDelim(tok))
             {
-                if (node->kind == NodeKind::ROOT && !node->children.empty())
+                if(node->kind == NodeKind::ROOT && !node->children.empty())
                 {
                     return {"unbalanced (non-nested list start)", tok};
                 }
-                node->children.emplace_back(tok);
+                node->children.emplace_back(getAggregateKind(tok), tok);
                 stack.push(node);
                 node = &node->children.back();
             }
-            else if (tok.kind == TokenKind::RPAREN)
+            else if(isEndAggregateDelim(tok))
             {
-                if (node->kind != NodeKind::LIST)
-                    return {"unbalacned r-paren", tok};
+                const auto end_kind = getAggregateKind(tok);
+                if(node->kind != end_kind)
+                    return {"unbalanced aggregate-kind", tok};
                 assert(!stack.empty());
                 node = stack.top();
                 stack.pop();
             }
             else
             {
-                if (node->kind == NodeKind::ROOT && !node->children.empty())
+                if(node->kind == NodeKind::ROOT && !node->children.empty())
                 {
                     return {"unbalanced (Multiple-Atoms outside list)", tok};
                 }
@@ -383,11 +475,11 @@ public:
             }
         }
 
-        if (node->kind != NodeKind::ROOT)
+        if(node->kind != NodeKind::ROOT)
         {
             return {"unbalanced tree", node->token};
         }
-        if (node->children.empty())
+        if(node->children.empty())
         {
             return {"No tokens parsed", Token()};
         }
@@ -435,22 +527,46 @@ public:
 
 void printTree(std::ostream& out, const TreeNode& node)
 {
-    if (node.kind == NodeKind::ROOT)
+    if(node.kind == NodeKind::ROOT)
     {
         assert(!node.children.empty());
         printTree(out, node.children[0]);
     }
-    else if (node.kind == NodeKind::LIST)
+    else if(node.kind == NodeKind::LIST)
     {
         out << "(";
         std::string sep = "";
-        for (const auto& child: node.children)
+        for(const auto& child : node.children)
         {
             out << sep;
             printTree(out, child);
             sep = " ";
         }
         out << ")";
+    }
+    else if(node.kind == NodeKind::VECTOR)
+    {
+        out << "[";
+        std::string sep = "";
+        for(const auto& child : node.children)
+        {
+            out << sep;
+            printTree(out, child);
+            sep = " ";
+        }
+        out << "]";
+    }
+    else if(node.kind == NodeKind::HASHMAP)
+    {
+        out << "{";
+        std::string sep = "";
+        for(const auto& child : node.children)
+        {
+            out << sep;
+            printTree(out, child);
+            sep = " ";
+        }
+        out << "}";
     }
     else
     {
@@ -473,7 +589,7 @@ int mainLoop(const ConfigInfo& config_info)
 
         auto parse_result = parser.parse(tokens);
 
-        if (parse_result.error())
+        if(parse_result.error())
         {
             std::cout << "ERROR: " << parse_result.message() << "\n";
         }
