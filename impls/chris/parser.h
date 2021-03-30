@@ -2,6 +2,7 @@
 #define PARSER_H
 
 #include "lexer.h"
+#include "result.h"
 
 #include <cassert>
 #include <optional>
@@ -41,40 +42,7 @@ public:
     }
 };
 
-class ParseResult
-{
-    std::optional<TreeNode> result;
-    std::string error_message;
-    // Shut the compiler up
-    Token token {TokenKind::SYM, "", 0};
-
-public:
-    ParseResult(std::string error_message_, Token token_) :
-        error_message {error_message_},
-        token {token_}
-    {
-    }
-
-    ParseResult(TreeNode node_) :
-        result {node_}
-    {
-    }
-
-    const std::string& message() const
-    {
-        return error_message;
-    }
-
-    bool error() const
-    {
-        return !bool(result);
-    }
-
-    const TreeNode& get()
-    {
-        return result.value();
-    }
-};
+using ParseResult = Result<TreeNode>;
 
 constexpr bool isStartAggregateDelim(const Token& tok)
 {
