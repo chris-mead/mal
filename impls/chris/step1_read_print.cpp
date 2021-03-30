@@ -16,7 +16,6 @@ public:
     std::string_view prompt {DEFAULT_PROMPT};
 };
 
-
 class InterpreterState
 {
 private:

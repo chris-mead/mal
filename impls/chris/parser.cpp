@@ -4,4 +4,3 @@
 #include "parser.h"
 
 #endif /* PARSER_H */
-

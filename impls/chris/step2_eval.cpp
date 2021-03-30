@@ -16,7 +16,6 @@ public:
     std::string_view prompt {DEFAULT_PROMPT};
 };
 
-
 class InterpreterState
 {
 private:
@@ -105,7 +104,7 @@ void printTree(std::ostream& out, const TreeNode& node)
 }
 
 using EvalResult = Result<TreeNode>;
-    
+
 class REPLEnv
 {
 public:
@@ -114,17 +113,17 @@ public:
         if(symbol == "+")
         {
             int acc = 0;
-            for(const auto& node: nodes)
+            for(const auto& node : nodes)
             {
                 auto num = std::atoi(node.token.text.c_str());
                 acc += num;
             }
-            return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
+            return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
         }
-        else if (symbol == "-")
+        else if(symbol == "-")
         {
             int acc;
-            if (nodes.empty())
+            if(nodes.empty())
             {
                 acc = 0;
             }
@@ -139,22 +138,22 @@ public:
                     ++iter;
                 }
             }
-            return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
+            return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
         }
-        else if (symbol == "*")
+        else if(symbol == "*")
         {
             int acc = 1;
-            for(const auto& node: nodes)
+            for(const auto& node : nodes)
             {
                 auto num = std::atoi(node.token.text.c_str());
                 acc *= num;
             }
-            return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
+            return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
         }
-        else if (symbol == "/")
+        else if(symbol == "/")
         {
             int acc;
-            if (nodes.size() < 2)
+            if(nodes.size() < 2)
             {
                 acc = 0;
             }
@@ -166,18 +165,18 @@ public:
                 while(iter != std::end(nodes))
                 {
                     int denom = std::atoi(iter->token.text.c_str());
-                    if (denom == 0)
+                    if(denom == 0)
                         return {"Divide by 0", iter->token};
-                    
+
                     acc /= denom;
                     ++iter;
                 }
             }
-            return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
+            return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
         }
         else
         {
-            return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, "0", 0});
+            return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, "0", 0});
         }
     }
 };
@@ -190,40 +189,38 @@ EvalResult evalAST(const TreeNode& node, const REPLEnv& env)
         return evalAST(node.children[0], env);
     case NodeKind::ATOM:
         return node;
-    case NodeKind::LIST:
-    {
-        if (node.children.empty())
+    case NodeKind::LIST: {
+        if(node.children.empty())
         {
             // Returns a _copy_
             return node;
         }
         const auto& func = node.children[0];
         std::vector<TreeNode> evaluated;
-        for (auto it = ++std::begin(node.children); it != std::end(node.children); ++it)
+        for(auto it = ++std::begin(node.children); it != std::end(node.children); ++it)
         {
             EvalResult eval_child = evalAST(*it, env);
-            if (eval_child.error())
+            if(eval_child.error())
                 return eval_child;
-            
+
             evaluated.push_back(eval_child.get());
         }
         return env.apply(func.token.text, evaluated);
     }
     case NodeKind::VECTOR:
-    case NodeKind::HASHMAP:
-    {
-        if (node.children.empty())
+    case NodeKind::HASHMAP: {
+        if(node.children.empty())
         {
             // Returns a _copy_
             return node;
         }
         // TODO - Handle Hashmap sanely!
         std::vector<TreeNode> evaluated;
-        TreeNode result{node.kind, Token{node.token.kind, node.token.text, 0}};
-        for (const auto& child : node.children)
+        TreeNode result {node.kind, Token {node.token.kind, node.token.text, 0}};
+        for(const auto& child : node.children)
         {
             EvalResult eval_child = evalAST(child, env);
-            if (eval_child.error())
+            if(eval_child.error())
                 return eval_child;
             result.appendChild(eval_child.get());
         }
@@ -233,7 +230,7 @@ EvalResult evalAST(const TreeNode& node, const REPLEnv& env)
 
     assert(0 && "Should not happen");
 }
-    
+
 int mainLoop(const ConfigInfo& config_info)
 {
     InterpreterState state {config_info, &std::cin};
@@ -248,7 +245,7 @@ int mainLoop(const ConfigInfo& config_info)
         Parser parser;
 
         auto parse_result = parser.parse(tokens);
-        
+
         if(parse_result.error())
         {
             std::cout << "ERROR: " << parse_result.message() << "\n";
@@ -258,7 +255,7 @@ int mainLoop(const ConfigInfo& config_info)
             const auto& root_node = parse_result.get();
             REPLEnv env;
             const auto result = evalAST(root_node, env);
-            if (result.error())
+            if(result.error())
             {
                 std::cout << "ERROR: " << parse_result.message() << "\n";
             }
