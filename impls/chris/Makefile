@@ -1,7 +1,13 @@
 
 DEBUG?=1
 
-CC:=g++
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S),Darwin)
+    CC:=g++-10
+else
+    CC:=g++
+endif
 
 ifeq ($(DEBUG), 1)
     OPT_FLAGS:=-O0 -g
@@ -13,7 +19,7 @@ BUILD=build
 
 DEPFLAGS = -MT $@ -MMD -MP -MF $(BUILD)/$*.d
 WARNFLAGS:=-Wall -Wextra -Wextra -pedantic
-CFLAGS=$(OPT_FLAGS) --std=c++17 $(WARNFLAGS)
+CFLAGS=$(OPT_FLAGS) --std=c++20 $(WARNFLAGS)
 
 LIB_SRCS:=lexer.cpp\
           parser.cpp
