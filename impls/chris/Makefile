@@ -23,12 +23,15 @@ CFLAGS=$(OPT_FLAGS) --std=c++20 $(WARNFLAGS)
 
 LIB_SRCS:=lexer.cpp\
           parser.cpp\
-          evaluator.cpp
+          evaluator.cpp\
+          env.cpp
 
 LIB_OBJS:=$(patsubst %.cpp,$(BUILD)/%.o,$(LIB_SRCS))
 
 STEP_SRCS:=step0_repl.cpp\
-           step1_read_print.cpp
+           step1_read_print.cpp\
+           step2_eval.cpp\
+           step3_env.cpp
 
 ALL_SRCS:=$(LIB_SRC) $(STEP_SRCS)
 DEPS:=$(patsubst %.cpp,$(BUILD)/%.d,$(ALL_SRCS))
@@ -43,6 +46,9 @@ step1_read_print: $(BUILD)/step1_read_print.o $(LIB_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 step2_eval: $(BUILD)/step2_eval.o $(LIB_OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+step3_env: $(BUILD)/step3_env.o $(LIB_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 $(BUILD):
