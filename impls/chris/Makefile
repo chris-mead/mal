@@ -22,7 +22,9 @@ WARNFLAGS:=-Wall -Wextra -Wextra -pedantic
 CFLAGS=$(OPT_FLAGS) --std=c++20 $(WARNFLAGS)
 
 LIB_SRCS:=lexer.cpp\
-          parser.cpp
+          parser.cpp\
+          evaluator.cpp
+
 LIB_OBJS:=$(patsubst %.cpp,$(BUILD)/%.o,$(LIB_SRCS))
 
 STEP_SRCS:=step0_repl.cpp\

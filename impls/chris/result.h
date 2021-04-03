@@ -1,4 +1,8 @@
+#ifndef RESULT_H
+#define RESULT_H
+
 #include <optional>
+#include <string>
 
 template<typename T>
 class Result
@@ -40,3 +44,5 @@ public:
         return result.value();
     }
 };
+
+#endif /* RESSULT_H */
