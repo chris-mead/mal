@@ -6,7 +6,7 @@ UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
     CC:=g++-10
 else
-    CC:=g++
+    CC:=g++-10
 endif
 
 ifeq ($(DEBUG), 1)
