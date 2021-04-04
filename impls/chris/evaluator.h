@@ -1,15 +1,15 @@
 #ifndef EVALUATOR_H
 #define EVALUATOR_H
 
-#include "lexer.h"
 #include "env.h"
-#include "result.h"
+#include "lexer.h"
 #include "parser.h"
+#include "result.h"
 
 #include <functional>
-#include <string>
 #include <span>
 #include <stack>
+#include <string>
 #include <vector>
 
 using EvalResult = Result<TreeNode>;
@@ -19,6 +19,7 @@ class REPLEnv
     std::stack<Environment> env_stack;
 
     Environment* leaf_env{nullptr};
+
 public:
     REPLEnv();
     EvalResult apply(std::string symbol, const std::span<const TreeNode> nodes);
@@ -48,75 +49,69 @@ inline REPLEnv::REPLEnv()
     leaf_env = &env_stack.top();
     auto& root_env = *leaf_env;
 
-    root_env.set("+", [](auto& nodes)
-                      {
-                          int acc = 0;
-                          for(const auto& node : nodes)
-                          {
-                              auto num = std::atoi(node.token.text.c_str());
-                              acc += num;
-                          }
-                          return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
-                      });
-    root_env.set("-", [](auto& nodes)
-                      {
-                          int acc;
-                          if(nodes.empty())
-                          {
-                              acc = 0;
-                          }
-                          else
-                          {
-                              auto iter = std::begin(nodes);
-                              acc = std::atoi(iter->token.text.c_str());
-                              ++iter;
-                              while(iter != std::end(nodes))
-                              {
-                                  acc -= std::atoi(iter->token.text.c_str());
-                                  ++iter;
-                              }
-                          }
-                          return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
-                      });
+    root_env.set("+", [](auto& nodes) {
+        int acc = 0;
+        for (const auto& node : nodes)
+        {
+            auto num = std::atoi(node.token.text.c_str());
+            acc += num;
+        }
+        return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
+    });
+    root_env.set("-", [](auto& nodes) {
+        int acc;
+        if (nodes.empty())
+        {
+            acc = 0;
+        }
+        else
+        {
+            auto iter = std::begin(nodes);
+            acc = std::atoi(iter->token.text.c_str());
+            ++iter;
+            while (iter != std::end(nodes))
+            {
+                acc -= std::atoi(iter->token.text.c_str());
+                ++iter;
+            }
+        }
+        return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
+    });
 
-    root_env.set("*", [](auto& nodes)
-                      {
-                          int acc = 1;
-                          for(const auto& node : nodes)
-                          {
-                              auto num = std::atoi(node.token.text.c_str());
-                              acc *= num;
-                          }
-                          return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
-                      });
+    root_env.set("*", [](auto& nodes) {
+        int acc = 1;
+        for (const auto& node : nodes)
+        {
+            auto num = std::atoi(node.token.text.c_str());
+            acc *= num;
+        }
+        return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
+    });
 
-    root_env.set("/", [](auto& nodes)
-                    {
-                        int acc;
-                        if(nodes.size() < 2)
-                        {
-                            acc = 0;
-                        }
-                        else
-                        {
-                            auto iter = std::begin(nodes);
-                            acc = std::atoi(iter->token.text.c_str());
-                            ++iter;
-                            while(iter != std::end(nodes))
-                            {
-                                int denom = std::atoi(iter->token.text.c_str());
-                                // TODO - Divide by zero
-                                // if(denom == 0)
-                                //     return EvalResult{"Divide by 0", Token{TokenKind::NUMBER, "0", 0}};
+    root_env.set("/", [](auto& nodes) {
+        int acc;
+        if (nodes.size() < 2)
+        {
+            acc = 0;
+        }
+        else
+        {
+            auto iter = std::begin(nodes);
+            acc = std::atoi(iter->token.text.c_str());
+            ++iter;
+            while (iter != std::end(nodes))
+            {
+                int denom = std::atoi(iter->token.text.c_str());
+                // TODO - Divide by zero
+                // if(denom == 0)
+                //     return EvalResult{"Divide by 0", Token{TokenKind::NUMBER, "0", 0}};
 
-                                acc /= denom;
-                                ++iter;
-                            }
-                        }
-                        return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
-                    });
-
-
+                acc /= denom;
+                ++iter;
+            }
+        }
+        return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
+    });
 }
 
 EvalResult inline evalAST(const TreeNode& node, REPLEnv& env);
@@ -143,10 +138,10 @@ EvalResult inline REPLEnv::apply(std::string symbol, const std::span<const TreeN
     // First check special forms
     if (symbol == "def!")
     {
-        if(nodes.size() != 2)
+        if (nodes.size() != 2)
         {
             std::string error_message = "ERROR: def! without exactly 2 parameters";
-            return EvalResult(error_message, Token {TokenKind::NUMBER, "0", 0});
+            return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
         }
         auto& key = nodes[0];
         auto& val = nodes[1];
@@ -159,8 +154,7 @@ EvalResult inline REPLEnv::apply(std::string symbol, const std::span<const TreeN
         if (nodes.size() != 2)
         {
             std::string error_message = "Empty let";
-            return EvalResult(error_message, Token {TokenKind::NUMBER, "0", 0});
-
+            return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
         }
         auto& let_node = nodes[0];
         auto& bindings = let_node.children;
@@ -168,14 +162,14 @@ EvalResult inline REPLEnv::apply(std::string symbol, const std::span<const TreeN
         if (bindings.size() % 2 != 0)
         {
             std::string error_message = "Let bindings of uneven length";
-            return EvalResult(error_message, Token {TokenKind::NUMBER, "0", 0});
+            return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
         }
 
         pushEnv();
-        for(size_t i=0; i < bindings.size(); i+=2)
+        for (size_t i = 0; i < bindings.size(); i += 2)
         {
             const auto& key = bindings[i];
-            const auto& val = bindings[i+1];
+            const auto& val = bindings[i + 1];
             auto result = addDefToEnv(key, val, *this);
             if (result.error())
             {
@@ -191,10 +185,10 @@ EvalResult inline REPLEnv::apply(std::string symbol, const std::span<const TreeN
 
     // TODO - ranges?
     std::vector<TreeNode> evaluated;
-    for(auto it = std::begin(nodes); it != std::end(nodes); ++it)
+    for (auto it = std::begin(nodes); it != std::end(nodes); ++it)
     {
         EvalResult eval_child = evalAST(*it, *this);
-        if(eval_child.error())
+        if (eval_child.error())
             return eval_child;
         evaluated.push_back(eval_child.get());
     }
@@ -203,12 +197,12 @@ EvalResult inline REPLEnv::apply(std::string symbol, const std::span<const TreeN
     if (func)
         return (*func)(evaluated);
     std::string error_message = "ERROR: '" + symbol + "' not found";
-    return EvalResult(error_message, Token {TokenKind::NUMBER, "0", 0});
+    return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
 }
 
 EvalResult inline evalAST(const TreeNode& node, REPLEnv& env)
 {
-    switch(node.kind)
+    switch (node.kind)
     {
     case NodeKind::ROOT:
         return evalAST(node.children[0], env);
@@ -229,7 +223,7 @@ EvalResult inline evalAST(const TreeNode& node, REPLEnv& env)
             return node;
         }
     case NodeKind::LIST: {
-        if(node.children.empty())
+        if (node.children.empty())
         {
             // Returns a _copy_
             return node;
@@ -242,18 +236,18 @@ EvalResult inline evalAST(const TreeNode& node, REPLEnv& env)
     }
     case NodeKind::VECTOR:
     case NodeKind::HASHMAP: {
-        if(node.children.empty())
+        if (node.children.empty())
         {
             // Returns a _copy_
             return node;
         }
         // TODO - Handle Hashmap sanely!
         std::vector<TreeNode> evaluated;
-        TreeNode result {node.kind, Token {node.token.kind, node.token.text, 0}};
-        for(const auto& child : node.children)
+        TreeNode result{node.kind, Token{node.token.kind, node.token.text, 0}};
+        for (const auto& child : node.children)
         {
             EvalResult eval_child = evalAST(child, env);
-            if(eval_child.error())
+            if (eval_child.error())
                 return eval_child;
             result.appendChild(eval_child.get());
         }
@@ -265,5 +259,3 @@ EvalResult inline evalAST(const TreeNode& node, REPLEnv& env)
 }
 
 #endif /* EVALUATOR */
-
-

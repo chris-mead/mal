@@ -23,9 +23,10 @@ BraceWrapping:
    SplitEmptyFunction: false
    SplitEmptyRecord: true
    SplitEmptyNamespace: true
-Cpp11BracedListStyle: true  
-SpaceBeforeParens: Never
+Cpp11BracedListStyle: true
+SpaceBeforeParens: ControlStatements
 AlwaysBreakTemplateDeclarations: false
 BreakConstructorInitializers: AfterColon
 SpaceAfterTemplateKeyword: false
 AlignAfterOpenBracket: true
+SpaceBeforeCpp11BracedList: false

@@ -9,12 +9,12 @@
 #include <string_view>
 #include <vector>
 
-const std::string_view DEFAULT_PROMPT {"user> "};
+const std::string_view DEFAULT_PROMPT{"user> "};
 
 class ConfigInfo
 {
 public:
-    std::string_view prompt {DEFAULT_PROMPT};
+    std::string_view prompt{DEFAULT_PROMPT};
 };
 
 class InterpreterState
@@ -26,8 +26,8 @@ private:
 public:
     InterpreterState(const ConfigInfo& config_info_,
                      std::istream* in_) :
-        in {in_},
-        prompt {config_info_.prompt}
+        in{in_},
+        prompt{config_info_.prompt}
     {
     }
 
@@ -57,16 +57,16 @@ public:
 
 void printTree(std::ostream& out, const TreeNode& node)
 {
-    if(node.kind == NodeKind::ROOT)
+    if (node.kind == NodeKind::ROOT)
     {
         assert(!node.children.empty());
         printTree(out, node.children[0]);
     }
-    else if(node.kind == NodeKind::LIST)
+    else if (node.kind == NodeKind::LIST)
     {
         out << "(";
         std::string sep = "";
-        for(const auto& child : node.children)
+        for (const auto& child : node.children)
         {
             out << sep;
             printTree(out, child);
@@ -74,11 +74,11 @@ void printTree(std::ostream& out, const TreeNode& node)
         }
         out << ")";
     }
-    else if(node.kind == NodeKind::VECTOR)
+    else if (node.kind == NodeKind::VECTOR)
     {
         out << "[";
         std::string sep = "";
-        for(const auto& child : node.children)
+        for (const auto& child : node.children)
         {
             out << sep;
             printTree(out, child);
@@ -86,11 +86,11 @@ void printTree(std::ostream& out, const TreeNode& node)
         }
         out << "]";
     }
-    else if(node.kind == NodeKind::HASHMAP)
+    else if (node.kind == NodeKind::HASHMAP)
     {
         out << "{";
         std::string sep = "";
-        for(const auto& child : node.children)
+        for (const auto& child : node.children)
         {
             out << sep;
             printTree(out, child);
@@ -106,9 +106,9 @@ void printTree(std::ostream& out, const TreeNode& node)
 
 int mainLoop(const ConfigInfo& config_info)
 {
-    InterpreterState state {config_info, &std::cin};
+    InterpreterState state{config_info, &std::cin};
     REPLEnv env;
-    while(state.moreInput())
+    while (state.moreInput())
     {
         state.printPrompt();
         std::string line = state.readLine();
@@ -122,7 +122,7 @@ int mainLoop(const ConfigInfo& config_info)
 
         auto parse_result = parser.parse(tokens);
 
-        if(parse_result.error())
+        if (parse_result.error())
         {
             std::cout << "ERROR: " << parse_result.message() << "\n";
         }
@@ -130,7 +130,7 @@ int mainLoop(const ConfigInfo& config_info)
         {
             const auto& root_node = parse_result.get();
             const auto eval_result = evalAST(root_node, env);
-            if(eval_result.error())
+            if (eval_result.error())
             {
                 std::cout << "ERROR: " << eval_result.message() << "\n";
             }

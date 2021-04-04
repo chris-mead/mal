@@ -10,17 +10,17 @@ class Result
     std::optional<T> result;
     std::string error_message;
     // Shut the compiler up
-    Token token {TokenKind::SYM, "", 0};
+    Token token{TokenKind::SYM, "", 0};
 
 public:
     Result(std::string error_message_, Token token_) :
-        error_message {error_message_},
-        token {token_}
+        error_message{error_message_},
+        token{token_}
     {
     }
 
     Result(T node_) :
-        result {node_}
+        result{node_}
     {
     }
 

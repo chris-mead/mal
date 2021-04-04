@@ -27,14 +27,14 @@ public:
     size_t pos; // In the parent string
 
     Token() :
-        kind {TokenKind::INVALID}
+        kind{TokenKind::INVALID}
     {
     }
 
     Token(TokenKind kind_, std::string_view text_, size_t pos_) :
-        kind {kind_},
-        text {text_},
-        pos {pos_}
+        kind{kind_},
+        text{text_},
+        pos{pos_}
     {
     }
 };
@@ -80,8 +80,8 @@ private:
     class LexerState
     {
         std::string_view text;
-        std::size_t pos {0};
-        lex_char_t look_ahead {LEX_EOF};
+        std::size_t pos{0};
+        lex_char_t look_ahead{LEX_EOF};
 
         lex_char_t peek() const
         {
@@ -90,9 +90,9 @@ private:
 
     public:
         LexerState(std::string_view text_) :
-            text {text_}
+            text{text_}
         {
-            if(!text_.empty())
+            if (!text_.empty())
                 look_ahead = text[pos];
         }
 
@@ -104,7 +104,7 @@ private:
         void consume()
         {
             ++pos;
-            if(pos < text.length())
+            if (pos < text.length())
                 look_ahead = text[pos];
             else
                 look_ahead = LEX_EOF;
@@ -112,42 +112,42 @@ private:
 
         Token lparen()
         {
-            Token tok {TokenKind::LPAREN, "(", pos};
+            Token tok{TokenKind::LPAREN, "(", pos};
             consume();
             return tok;
         }
 
         Token rparen()
         {
-            Token tok {TokenKind::RPAREN, ")", pos};
+            Token tok{TokenKind::RPAREN, ")", pos};
             consume();
             return tok;
         }
 
         Token lbracket()
         {
-            Token tok {TokenKind::LBRACKET, "[", pos};
+            Token tok{TokenKind::LBRACKET, "[", pos};
             consume();
             return tok;
         }
 
         Token rbracket()
         {
-            Token tok {TokenKind::RBRACKET, "]", pos};
+            Token tok{TokenKind::RBRACKET, "]", pos};
             consume();
             return tok;
         }
 
         Token lbrace()
         {
-            Token tok {TokenKind::LBRACE, "{", pos};
+            Token tok{TokenKind::LBRACE, "{", pos};
             consume();
             return tok;
         }
 
         Token rbrace()
         {
-            Token tok {TokenKind::RBRACE, "}", pos};
+            Token tok{TokenKind::RBRACE, "}", pos};
             consume();
             return tok;
         }
@@ -158,7 +158,7 @@ private:
             pos--;
             look_ahead = '-';
 
-            if(isDigit(lookAhead()))
+            if (isDigit(lookAhead()))
             {
                 return number();
             }
@@ -174,45 +174,45 @@ private:
         {
             const auto tok_start = pos;
             consume();
-            while(isDigit(lookAhead()))
+            while (isDigit(lookAhead()))
             {
                 consume();
             }
             std::string_view tok_text = text.substr(tok_start, pos - tok_start);
-            return Token {TokenKind::NUMBER, tok_text, tok_start};
+            return Token{TokenKind::NUMBER, tok_text, tok_start};
         }
 
         Token symbol()
         {
             const auto tok_start = pos;
             consume();
-            while(!isSymEnd(lookAhead()))
+            while (!isSymEnd(lookAhead()))
             {
                 consume();
             }
             // TODO: this _might_ be a keyword... in which case we need to promote it
             std::string_view tok_text = text.substr(tok_start, pos - tok_start);
-            return Token {TokenKind::SYM, tok_text, tok_start};
+            return Token{TokenKind::SYM, tok_text, tok_start};
         }
 
         Token string()
         {
             const auto tok_start = pos;
             consume();
-            bool escaped {false};
-            while(escaped || !isStringDelim(lookAhead()))
+            bool escaped{false};
+            while (escaped || !isStringDelim(lookAhead()))
             {
-                if(lookAhead() == LEX_EOF)
+                if (lookAhead() == LEX_EOF)
                 {
                     return Token(TokenKind::INVALID, "EOF in string", tok_start);
                 }
-                if(escaped)
+                if (escaped)
                 {
                     escaped = false;
                 }
                 else
                 {
-                    if(lookAhead() == '\\')
+                    if (lookAhead() == '\\')
                         escaped = true;
                 }
                 consume();
@@ -221,13 +221,13 @@ private:
             consume();
             // TODO: this _might_ be a keyword... in which case we need to promote it?
             std::string_view tok_text = text.substr(tok_start, pos - tok_start);
-            return Token {TokenKind::STRING, tok_text, tok_start};
+            return Token{TokenKind::STRING, tok_text, tok_start};
         }
 
         void lineComment()
         {
             consume();
-            while(lookAhead() != '\n' && lookAhead() != LEX_EOF)
+            while (lookAhead() != '\n' && lookAhead() != LEX_EOF)
             {
                 consume();
             }
@@ -240,24 +240,24 @@ private:
 public:
     TokenStream tokenise(std::string line)
     {
-        LexerState state {line};
+        LexerState state{line};
 
         TokenStream result;
 
         bool done = false;
         bool in_line_comment = false;
-        while(!done)
+        while (!done)
         {
             const auto c = state.lookAhead();
-            if(in_line_comment)
+            if (in_line_comment)
             {
-                if(c == '\n')
+                if (c == '\n')
                     in_line_comment = false;
                 state.consume();
                 continue;
             }
 
-            switch(c)
+            switch (c)
             {
             case EOF:
                 done = true;
@@ -287,25 +287,25 @@ public:
                 break;
             }
             default:
-                if(isLineCommentDelim(c))
+                if (isLineCommentDelim(c))
                 {
                     state.lineComment();
                     continue;
                 }
-                if(isWS(c))
+                if (isWS(c))
                 {
                     state.consume();
                     continue;
                 }
-                if(isMinus(c))
+                if (isMinus(c))
                 {
                     result.push_back(state.minus());
                 }
-                else if(isDigit(c))
+                else if (isDigit(c))
                 {
                     result.push_back(state.number());
                 }
-                else if(isStringDelim(c))
+                else if (isStringDelim(c))
                 {
                     result.push_back(state.string());
                 }
