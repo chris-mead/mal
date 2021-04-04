@@ -145,7 +145,7 @@ EvalResult inline REPLEnv::apply(std::string symbol, const std::span<const TreeN
     const auto* func = leaf_env->get(symbol);
     if (func)
         return (*func)(evaluated);
-    std::string error_message = "ERROR: Could not find \"" + symbol + "\"";
+    std::string error_message = "ERROR: '" + symbol + "' not found";
     return EvalResult(error_message, Token {TokenKind::NUMBER, "0", 0});
 }
 
