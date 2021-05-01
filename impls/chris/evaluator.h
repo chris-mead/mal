@@ -116,7 +116,7 @@ inline REPLEnv::REPLEnv()
 
 EvalResult inline evalAST(const TreeNode& node, REPLEnv& env);
 
-EvalResult addDefToEnv(const TreeNode& key, const TreeNode& val, REPLEnv& env)
+inline EvalResult addDefToEnv(const TreeNode& key, const TreeNode& val, REPLEnv& env)
 {
     if (key.token.kind != TokenKind::SYM)
     {
@@ -133,7 +133,7 @@ EvalResult addDefToEnv(const TreeNode& key, const TreeNode& val, REPLEnv& env)
     return evaluated;
 }
 
-EvalResult inline REPLEnv::apply(std::string symbol, const std::span<const TreeNode> nodes)
+inline EvalResult REPLEnv::apply(std::string symbol, const std::span<const TreeNode> nodes)
 {
     // First check special forms
     if (symbol == "def!")
