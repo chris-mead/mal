@@ -14,7 +14,6 @@
 
 using EvalResult = Result<TreeNode>;
 
-
 class REPLEnv
 {
     std::stack<Environment> env_stack;
@@ -42,6 +41,13 @@ public:
         env_stack.pop();
         leaf_env = &env_stack.top();
     }
+
+private:
+    EvalResult applyDef(const std::span<const TreeNode> nodes);
+    EvalResult applyFn(const std::span<const TreeNode> nodes);
+    EvalResult applyIf(const std::span<const TreeNode> nodes);
+    EvalResult applyLet(const std::span<const TreeNode> nodes);
+    EvalResult applyDo(const std::span<const TreeNode> nodes);
 };
 
 class GuardedEnv
@@ -160,46 +166,11 @@ inline EvalResult REPLEnv::apply(std::string symbol, const std::span<const TreeN
     // First check special forms
     if (symbol == "def!")
     {
-        if (nodes.size() != 2)
-        {
-            std::string error_message = "ERROR: def! without exactly 2 parameters";
-            return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
-        }
-        auto& key = nodes[0];
-        auto& val = nodes[1];
-        auto evaluated = addDefToEnv(key, val, *this);
-        return evaluated;
+        return applyDef(nodes);
     }
     else if (symbol == "let*")
     {
-        // Let's examine the children
-        if (nodes.size() != 2)
-        {
-            std::string error_message = "Empty let";
-            return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
-        }
-        auto& let_node = nodes[0];
-        auto& bindings = let_node.children;
-        auto& rest = nodes[1];
-        if (bindings.size() % 2 != 0)
-        {
-            std::string error_message = "Let bindings of uneven length";
-            return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
-        }
-
-        GuardedEnv g{this};
-        for (size_t i = 0; i < bindings.size(); i += 2)
-        {
-            const auto& key = bindings[i];
-            const auto& val = bindings[i + 1];
-            auto result = addDefToEnv(key, val, *this);
-            if (result.error())
-            {
-                return result;
-            }
-        }
-        auto result = evalAST(rest, *this);
-        return result;
+        return applyLet(nodes);
     }
 
     // TODO - ranges?
@@ -217,6 +188,52 @@ inline EvalResult REPLEnv::apply(std::string symbol, const std::span<const TreeN
         return (*func)(evaluated);
     std::string error_message = "ERROR: '" + symbol + "' not found";
     return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
+}
+
+// Special Form application implementations
+inline EvalResult REPLEnv::applyDef(const std::span<const TreeNode> nodes)
+{
+    if (nodes.size() != 2)
+    {
+        std::string error_message = "ERROR: def! without exactly 2 parameters";
+        return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
+    }
+    auto& key = nodes[0];
+    auto& val = nodes[1];
+    auto evaluated = addDefToEnv(key, val, *this);
+    return evaluated;
+}
+
+inline EvalResult REPLEnv::applyLet(const std::span<const TreeNode> nodes)
+{
+    // Let's examine the children
+    if (nodes.size() != 2)
+    {
+        std::string error_message = "Empty let";
+        return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
+    }
+    auto& let_node = nodes[0];
+    auto& bindings = let_node.children;
+    auto& rest = nodes[1];
+    if (bindings.size() % 2 != 0)
+    {
+        std::string error_message = "Let bindings of uneven length";
+        return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
+    }
+
+    GuardedEnv g{this};
+    for (size_t i = 0; i < bindings.size(); i += 2)
+    {
+        const auto& key = bindings[i];
+        const auto& val = bindings[i + 1];
+        auto result = addDefToEnv(key, val, *this);
+        if (result.error())
+        {
+            return result;
+        }
+    }
+    auto result = evalAST(rest, *this);
+    return result;
 }
 
 EvalResult inline evalAST(const TreeNode& node, REPLEnv& env)

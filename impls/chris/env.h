@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 using Func = std::function<TreeNode(const std::vector<TreeNode>&)>;
 
@@ -22,6 +23,16 @@ public:
     Environment(const Environment* outer_) :
         outer{outer_}
     {
+    }
+
+    Environment(const std::vector<std::string> binds, const std::vector<Func> exprs)
+    {
+        // TODO: Snazzy STL way to do this I am sure
+        auto to_bind = std::min(binds.size(), exprs.size());
+        for (decltype(to_bind) i=0; i < to_bind; i++)
+        {
+            set(binds[i], exprs[i]);
+        }
     }
 
     void set(std::string symbol, Func node);
