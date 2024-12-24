@@ -172,6 +172,10 @@ inline EvalResult REPLEnv::apply(std::string symbol, const std::span<const TreeN
     {
         return applyLet(nodes);
     }
+    else if (symbol == "if")
+    {
+        return applyIf(nodes);
+    }
 
     // TODO - ranges?
     std::vector<TreeNode> evaluated;
@@ -202,6 +206,50 @@ inline EvalResult REPLEnv::applyDef(const std::span<const TreeNode> nodes)
     auto& val = nodes[1];
     auto evaluated = addDefToEnv(key, val, *this);
     return evaluated;
+}
+
+inline bool asBool(TreeNode& node)
+{
+    if (node.kind == NodeKind::ATOM)
+    {
+        if (node.token.kind == TokenKind::NIL)
+            return false;
+        else if (node.token.kind == TokenKind::BOOL)
+            return node.token.text == "true";
+        else
+            return true;
+    }
+    else
+    {
+        return true;
+    }
+}
+
+inline EvalResult makeNil()
+{
+    return TreeNode(NodeKind::ATOM, Token{TokenKind::NIL, "nil", 0});
+}
+
+inline EvalResult REPLEnv::applyIf(const std::span<const TreeNode> nodes)
+{
+    if (nodes.size() < 2)
+    {
+        std::string error_message = "ERROR: if with < 2 parameters";
+        return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
+    }
+
+    auto& cond = nodes[0];
+    auto cond_result = evalAST(cond, *this);
+
+    if (cond_result.error())
+        return cond_result;
+
+    if (asBool(cond_result.get()))
+        return evalAST(nodes[1], *this);
+    else if (nodes.size() >= 3)
+        return evalAST(nodes[2], *this);
+    else
+        return makeNil();
 }
 
 inline EvalResult REPLEnv::applyLet(const std::span<const TreeNode> nodes)

@@ -16,6 +16,7 @@ enum class TokenKind
     NUMBER,
     STRING,
     BOOL,
+    NIL,
     INVALID
 };
 
@@ -196,9 +197,16 @@ private:
             {
                 consume();
             }
-            // TODO: this _might_ be a keyword... in which case we need to promote it
+
             std::string_view tok_text = text.substr(tok_start, pos - tok_start);
-            return Token{TokenKind::SYM, tok_text, tok_start};
+            auto tok_kind = TokenKind::SYM;
+            // This _might_ be a keyword... in which case we need to promote it
+            if (tok_text == "true" || tok_text == "false")
+                tok_kind = TokenKind::BOOL;
+            else if (tok_text == "nil")
+                tok_kind = TokenKind::NIL;
+
+            return Token{tok_kind, tok_text, tok_start};
         }
 
         Token string()

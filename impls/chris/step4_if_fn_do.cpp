@@ -98,8 +98,18 @@ void printTree(std::ostream& out, const TreeNode& node)
         }
         out << "}";
     }
+    else if (node.kind == NodeKind::ATOM)
+    {
+        if (node.token.kind == TokenKind::BOOL)
+            out << node.token.text;
+        else if (node.token.kind == TokenKind::NIL)
+            out << "nil";
+        else
+            out << node.token.text;
+    }
     else
     {
+        // Strictly speaking redundant
         out << node.token.text;
     }
 }
