@@ -34,7 +34,7 @@ step0_repl: $(BUILD)/step0_repl.o $(LIB_OBJS)
 step1_read_print: $(BUILD)/step1_read_print.o $(LIB_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
-step2_eval: $(BUILD)/step1_eval.o $(LIB_OBJS)
+step2_eval: $(BUILD)/step2_eval.o $(LIB_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 $(BUILD):

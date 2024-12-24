@@ -104,6 +104,80 @@ void printTree(std::ostream& out, const TreeNode& node)
     }
 }
 
+class REPLEnv
+{
+public:
+    TreeNode apply(std::string symbol, const std::vector<TreeNode> nodes) const
+    {
+        if(symbol == "+")
+        {
+            int acc = 0;
+            for(const auto& node: nodes)
+            {
+                auto num = std::atoi(node.token.text.c_str());
+                acc += num;
+            }
+            return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
+        }
+//        else if (symbol == "-")
+        // {
+        //     return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, "0");
+        // }
+        else if (symbol == "*")
+        {
+            int acc = 1;
+            for(const auto& node: nodes)
+            {
+                auto num = std::atoi(node.token.text.c_str());
+                acc *= num;
+            }
+            return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
+        }
+        // else if (symbol == "/")
+        // {
+        //     return TreeNode(NodeKind::ATOM, "0");
+        // }
+        else
+        {
+            return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, "0", 0});
+        }
+    }
+};
+
+TreeNode evalAST(const TreeNode& node, const REPLEnv& env)
+{
+    switch(node.kind)
+    {
+    case NodeKind::ROOT:
+        return evalAST(node.children[0], env);
+    case NodeKind::ATOM:
+    {
+        return node;
+    }
+    case NodeKind::LIST:
+    case NodeKind::VECTOR:
+    case NodeKind::HASHMAP:
+        if (node.children.empty())
+        {
+            // Returns a _copy_
+            return node;
+        }
+        else
+        {
+            const auto& func = node.children[0];
+            std::vector<TreeNode> evaluated;
+            for (auto it = ++std::begin(node.children); it != std::end(node.children); ++it)
+            {
+                TreeNode eval_child = evalAST(*it, env);
+                evaluated.push_back(eval_child);
+            }
+            return env.apply(func.token.text, evaluated);
+        }
+    }
+    assert(0);
+    return node;
+}
+
 int mainLoop(const ConfigInfo& config_info)
 {
     InterpreterState state {config_info, &std::cin};
@@ -119,6 +193,8 @@ int mainLoop(const ConfigInfo& config_info)
 
         auto parse_result = parser.parse(tokens);
 
+        
+        
         if(parse_result.error())
         {
             std::cout << "ERROR: " << parse_result.message() << "\n";
@@ -126,7 +202,9 @@ int mainLoop(const ConfigInfo& config_info)
         else
         {
             const auto& root_node = parse_result.get();
-            printTree(std::cout, root_node);
+            REPLEnv env;
+            const auto result = evalAST(root_node, env);
+            printTree(std::cout, result);
             std::cout << "\n";
         }
         std::cout << "\n";
