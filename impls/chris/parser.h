@@ -1,12 +1,15 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include "evaluator.h"
 #include "lexer.h"
 #include "result.h"
 
 #include <cassert>
+#include <functional>
 #include <optional>
 #include <stack>
+#include <vector>
 
 enum class NodeKind
 {
@@ -22,16 +25,23 @@ class TreeNode
 {
 public:
     NodeKind kind;
-    Token token;
     std::vector<TreeNode> children;
 
+    std::string name;
+
+private:
+    std::optional<Token> token;
+
+public:
     TreeNode() :
-        kind{NodeKind::ROOT}
+        kind{NodeKind::ROOT},
+        name{"ROOT"}
     {
     }
 
     TreeNode(NodeKind kind_, Token token_) :
         kind{kind_},
+        name{token_.text},
         token{token_}
     {
     }
@@ -40,7 +50,58 @@ public:
     {
         children.push_back(node);
     }
+
+    auto symbol() const
+    {
+        return name;
+    }
+
+    std::function<Result<TreeNode>(const std::vector<TreeNode>)> callable() const
+    {
+        return [](const std::vector<TreeNode>) { return Result<TreeNode>("Not implemented yet"); };
+    }
+
+    auto getToken() const
+    {
+        return token;
+    }
+
+    friend bool isSymbol(const TreeNode& node);
+
+    friend bool isFunc(const TreeNode& node);
+
+    friend bool isBool(const TreeNode& node);
+
+    friend bool isNumber(const TreeNode& node);
+
+    friend bool isNil(const TreeNode& node);
 };
+
+inline bool isSymbol(const TreeNode& node)
+{
+    return node.token->kind == TokenKind::SYM;
+}
+
+inline bool isFunc(const TreeNode& node)
+{
+    (void)node;
+    return false; //    return node.token.kind == TokenKind:;
+}
+
+inline bool isBool(const TreeNode& node)
+{
+    return node.token->kind != TokenKind::BOOL;
+}
+
+inline bool isNumber(const TreeNode& node)
+{
+    return node.token->kind != TokenKind::NUMBER;
+}
+
+inline bool isNil(const TreeNode& node)
+{
+    return node.token->kind != TokenKind::NIL;
+}
 
 using ParseResult = Result<TreeNode>;
 
@@ -114,7 +175,8 @@ public:
 
         if (node->kind != NodeKind::ROOT)
         {
-            return {"unbalanced tree", node->token};
+            // TODO - Improve this...o
+            return {"unbalanced tree", Token()};
         }
         if (node->children.empty())
         {

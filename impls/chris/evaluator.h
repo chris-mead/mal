@@ -84,17 +84,17 @@ EvalResult inline evalAST(const TreeNode& node, REPLEnv& env);
 
 inline EvalResult addDefToEnv(const TreeNode& key, const TreeNode& val, REPLEnv& env)
 {
-    if (key.token.kind != TokenKind::SYM)
+    if (!isSymbol(key))
     {
         std::string error_message = "ERROR: def! without symbol for first param";
-        return EvalResult(error_message, key.token);
+        return EvalResult(error_message, key.getToken());
     }
 
     auto evaluated = evalAST(val, env);
     if (evaluated.error())
         return evaluated;
 
-    env.getCurrentEnv().set(key.token.text, [evaluated](auto&) { return evaluated.get(); });
+    env.getCurrentEnv().set(key.symbol(), evaluated.get());
 
     return evaluated;
 }
@@ -129,11 +129,20 @@ inline EvalResult REPLEnv::apply(std::string symbol, const std::span<const TreeN
         evaluated.push_back(eval_child.get());
     }
 
-    const auto* func = leaf_env->get(symbol);
-    if (func)
-        return (*func)(evaluated);
-    std::string error_message = "ERROR: '" + symbol + "' not found";
-    return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
+    const auto* val = leaf_env->get(symbol);
+    if (!val)
+    {
+        std::string error_message = "ERROR: '" + symbol + "' not found";
+        return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
+    }
+    if (!isFunc(*val))
+    {
+        std::string error_message = "ERROR: Cannot call '" + symbol + "'";
+        return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
+    }
+
+    const auto& callable = val->callable();
+    return callable(evaluated);
 }
 
 // Special Form application implementations
@@ -154,10 +163,10 @@ inline bool asBool(TreeNode& node)
 {
     if (node.kind == NodeKind::ATOM)
     {
-        if (node.token.kind == TokenKind::NIL)
+        if (isNil(node))
             return false;
-        else if (node.token.kind == TokenKind::BOOL)
-            return node.token.text == "true";
+        else if (isBool(node))
+            return node.symbol() == "true";
         else
             return true;
     }
@@ -253,16 +262,13 @@ EvalResult inline evalAST(const TreeNode& node, REPLEnv& env)
     case NodeKind::ROOT:
         return evalAST(node.children[0], env);
     case NodeKind::ATOM:
-        if (node.token.kind == TokenKind::SYM)
+        if (isSymbol(node))
         {
             auto& cur_env = env.getCurrentEnv();
-            auto* res = cur_env.get(node.token.text);
+            auto* res = cur_env.get(node.symbol());
             if (res == nullptr)
-                return EvalResult("Could not resolve symbol", node.token);
-            // TODO - Replace with std::variant
-            std::vector<TreeNode> dummy;
-            auto* func = res;
-            return (*func)(dummy);
+                return EvalResult("Could not resolve '" + node.symbol() + "'");
+            return *res;
         }
         else
         {
@@ -278,7 +284,8 @@ EvalResult inline evalAST(const TreeNode& node, REPLEnv& env)
         std::vector<TreeNode> evaluated;
 
         std::span rest{++std::begin(node.children), std::end(node.children)};
-        return env.apply(func.token.text, rest);
+        // TODO: Pass the func... consider lambdas!
+        return env.apply(func.symbol(), rest);
     }
     case NodeKind::VECTOR:
     case NodeKind::HASHMAP: {
@@ -289,7 +296,7 @@ EvalResult inline evalAST(const TreeNode& node, REPLEnv& env)
         }
         // TODO - Handle Hashmap sanely!
         std::vector<TreeNode> evaluated;
-        TreeNode result{node.kind, Token{node.token.kind, node.token.text, 0}};
+        TreeNode result{node.kind, Token{TokenKind::LPAREN, node.symbol(), 0}};
         for (const auto& child : node.children)
         {
             EvalResult eval_child = evalAST(child, env);

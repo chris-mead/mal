@@ -100,17 +100,17 @@ void printTree(std::ostream& out, const TreeNode& node)
     }
     else if (node.kind == NodeKind::ATOM)
     {
-        if (node.token.kind == TokenKind::BOOL)
-            out << node.token.text;
-        else if (node.token.kind == TokenKind::NIL)
+        if (isBool(node))
+            out << node.symbol();
+        else if (isNil(node))
             out << "nil";
         else
-            out << node.token.text;
+            out << node.symbol();
     }
     else
     {
         // Strictly speaking redundant
-        out << node.token.text;
+        out << node.symbol();
     }
 }
 

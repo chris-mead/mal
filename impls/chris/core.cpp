@@ -65,4 +65,21 @@ void addCoreFunsToEnv(Environment& env)
         }
         return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
     });
+
+    env.set(">", [](auto& nodes) {
+        if (nodes.size() < 2)
+        {
+        }
+    });
 }
+
+template<T, std::string NAME>
+TreeNode BinaryNumericOp(auto& nodes)
+{
+    if (nodes.size() != 2)
+    {
+        return "Cannot apply " + name + " with " + nodes.size() + "operands";
+    }
+
+    return
+};

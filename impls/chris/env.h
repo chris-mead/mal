@@ -10,12 +10,10 @@
 #include <unordered_map>
 #include <vector>
 
-using Func = std::function<TreeNode(const std::vector<TreeNode>&)>;
-
 class Environment
 {
     const Environment* outer{nullptr};
-    std::unordered_map<std::string, Func> data;
+    std::unordered_map<std::string, TreeNode> data;
 
 public:
     Environment(){};
@@ -25,7 +23,7 @@ public:
     {
     }
 
-    Environment(const std::vector<std::string> binds, const std::vector<Func> exprs)
+    Environment(const std::vector<std::string> binds, const std::vector<TreeNode> exprs)
     {
         // TODO: Snazzy STL way to do this I am sure
         auto to_bind = std::min(binds.size(), exprs.size());
@@ -35,11 +33,12 @@ public:
         }
     }
 
-    void set(std::string symbol, Func node);
+    // TODO: move + copy semantics
+    void set(std::string symbol, TreeNode node);
 
     const Environment* find(std::string symbol) const;
 
-    const Func* get(std::string symbol) const;
+    const TreeNode* get(std::string symbol) const;
 };
 
 // TODO - std::optional?
@@ -53,7 +52,7 @@ inline const Environment* Environment::find(std::string symbol) const
         return nullptr;
 }
 
-inline const Func* Environment::get(std::string symbol) const
+inline const TreeNode* Environment::get(std::string symbol) const
 {
     const auto* containing_env = find(symbol);
     if (containing_env == nullptr)
@@ -64,8 +63,9 @@ inline const Func* Environment::get(std::string symbol) const
     return &(it->second);
 }
 
-inline void Environment::set(std::string symbol, Func node)
+inline void Environment::set(std::string symbol, TreeNode node)
 {
+    // TODO: Realy?
     data[symbol] = std::move(node);
 }
 
