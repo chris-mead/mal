@@ -14,6 +14,7 @@
 
 using EvalResult = Result<TreeNode>;
 
+
 class REPLEnv
 {
     std::stack<Environment> env_stack;
@@ -41,6 +42,27 @@ public:
         env_stack.pop();
         leaf_env = &env_stack.top();
     }
+};
+
+class GuardedEnv
+{
+private:
+    REPLEnv* env;
+
+public:
+    GuardedEnv(REPLEnv* env_) :
+        env{env_}
+    {
+        env->pushEnv();
+    }
+
+    ~GuardedEnv()
+    {
+        env->popEnv();
+    }
+
+    GuardedEnv(const GuardedEnv&) = delete;
+    GuardedEnv& operator=(const GuardedEnv&) = delete;
 };
 
 inline REPLEnv::REPLEnv()
@@ -165,7 +187,7 @@ inline EvalResult REPLEnv::apply(std::string symbol, const std::span<const TreeN
             return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
         }
 
-        pushEnv();
+        GuardedEnv g{this};
         for (size_t i = 0; i < bindings.size(); i += 2)
         {
             const auto& key = bindings[i];
@@ -176,10 +198,7 @@ inline EvalResult REPLEnv::apply(std::string symbol, const std::span<const TreeN
                 return result;
             }
         }
-
         auto result = evalAST(rest, *this);
-        popEnv();
-
         return result;
     }
 
