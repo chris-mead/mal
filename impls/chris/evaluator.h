@@ -12,80 +12,82 @@ using EvalResult = Result<TreeNode>;
 class REPLEnv
 {
 public:
-    EvalResult apply(std::string symbol, const std::vector<TreeNode> nodes) const
-    {
-        if(symbol == "+")
-        {
-            int acc = 0;
-            for(const auto& node : nodes)
-            {
-                auto num = std::atoi(node.token.text.c_str());
-                acc += num;
-            }
-            return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
-        }
-        else if(symbol == "-")
-        {
-            int acc;
-            if(nodes.empty())
-            {
-                acc = 0;
-            }
-            else
-            {
-                auto iter = std::begin(nodes);
-                acc = std::atoi(iter->token.text.c_str());
-                ++iter;
-                while(iter != std::end(nodes))
-                {
-                    acc -= std::atoi(iter->token.text.c_str());
-                    ++iter;
-                }
-            }
-            return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
-        }
-        else if(symbol == "*")
-        {
-            int acc = 1;
-            for(const auto& node : nodes)
-            {
-                auto num = std::atoi(node.token.text.c_str());
-                acc *= num;
-            }
-            return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
-        }
-        else if(symbol == "/")
-        {
-            int acc;
-            if(nodes.size() < 2)
-            {
-                acc = 0;
-            }
-            else
-            {
-                auto iter = std::begin(nodes);
-                acc = std::atoi(iter->token.text.c_str());
-                ++iter;
-                while(iter != std::end(nodes))
-                {
-                    int denom = std::atoi(iter->token.text.c_str());
-                    if(denom == 0)
-                        return {"Divide by 0", iter->token};
+    EvalResult apply(std::string symbol, const std::vector<TreeNode> nodes) const;
+};
 
-                    acc /= denom;
-                    ++iter;
-                }
-            }
-            return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
+EvalResult inline REPLEnv::apply(std::string symbol, const std::vector<TreeNode> nodes) const
+{
+    if(symbol == "+")
+    {
+        int acc = 0;
+        for(const auto& node : nodes)
+        {
+            auto num = std::atoi(node.token.text.c_str());
+            acc += num;
+        }
+        return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
+    }
+    else if(symbol == "-")
+    {
+        int acc;
+        if(nodes.empty())
+        {
+            acc = 0;
         }
         else
         {
-            return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, "0", 0});
+            auto iter = std::begin(nodes);
+            acc = std::atoi(iter->token.text.c_str());
+            ++iter;
+            while(iter != std::end(nodes))
+            {
+                acc -= std::atoi(iter->token.text.c_str());
+                ++iter;
+            }
         }
+        return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
     }
-};
+    else if(symbol == "*")
+    {
+        int acc = 1;
+        for(const auto& node : nodes)
+        {
+            auto num = std::atoi(node.token.text.c_str());
+            acc *= num;
+        }
+        return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
+    }
+    else if(symbol == "/")
+    {
+        int acc;
+        if(nodes.size() < 2)
+        {
+            acc = 0;
+        }
+        else
+        {
+            auto iter = std::begin(nodes);
+            acc = std::atoi(iter->token.text.c_str());
+            ++iter;
+            while(iter != std::end(nodes))
+            {
+                int denom = std::atoi(iter->token.text.c_str());
+                if(denom == 0)
+                    return {"Divide by 0", iter->token};
 
-EvalResult evalAST(const TreeNode& node, const REPLEnv& env)
+                acc /= denom;
+                ++iter;
+            }
+        }
+        return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
+    }
+    else
+    {
+        return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, "0", 0});
+    }
+}
+
+EvalResult inline evalAST(const TreeNode& node, const REPLEnv& env)
 {
     switch(node.kind)
     {
