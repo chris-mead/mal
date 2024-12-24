@@ -1,6 +1,7 @@
 #ifndef EVALUATOR_H
 #define EVALUATOR_H
 
+#include "core.h"
 #include "env.h"
 #include "lexer.h"
 #include "parser.h"
@@ -76,70 +77,7 @@ inline REPLEnv::REPLEnv()
     env_stack.emplace();
     leaf_env = &env_stack.top();
     auto& root_env = *leaf_env;
-
-    root_env.set("+", [](auto& nodes) {
-        int acc = 0;
-        for (const auto& node : nodes)
-        {
-            auto num = std::atoi(node.token.text.c_str());
-            acc += num;
-        }
-        return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
-    });
-    root_env.set("-", [](auto& nodes) {
-        int acc;
-        if (nodes.empty())
-        {
-            acc = 0;
-        }
-        else
-        {
-            auto iter = std::begin(nodes);
-            acc = std::atoi(iter->token.text.c_str());
-            ++iter;
-            while (iter != std::end(nodes))
-            {
-                acc -= std::atoi(iter->token.text.c_str());
-                ++iter;
-            }
-        }
-        return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
-    });
-
-    root_env.set("*", [](auto& nodes) {
-        int acc = 1;
-        for (const auto& node : nodes)
-        {
-            auto num = std::atoi(node.token.text.c_str());
-            acc *= num;
-        }
-        return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
-    });
-
-    root_env.set("/", [](auto& nodes) {
-        int acc;
-        if (nodes.size() < 2)
-        {
-            acc = 0;
-        }
-        else
-        {
-            auto iter = std::begin(nodes);
-            acc = std::atoi(iter->token.text.c_str());
-            ++iter;
-            while (iter != std::end(nodes))
-            {
-                int denom = std::atoi(iter->token.text.c_str());
-                // TODO - Divide by zero
-                // if(denom == 0)
-                //     return EvalResult{"Divide by 0", Token{TokenKind::NUMBER, "0", 0}};
-
-                acc /= denom;
-                ++iter;
-            }
-        }
-        return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
-    });
+    addCoreFunsToEnv(root_env);
 }
 
 EvalResult inline evalAST(const TreeNode& node, REPLEnv& env);
@@ -175,6 +113,10 @@ inline EvalResult REPLEnv::apply(std::string symbol, const std::span<const TreeN
     else if (symbol == "if")
     {
         return applyIf(nodes);
+    }
+    else if (symbol == "do")
+    {
+        return applyDo(nodes);
     }
 
     // TODO - ranges?
@@ -228,6 +170,26 @@ inline bool asBool(TreeNode& node)
 inline EvalResult makeNil()
 {
     return TreeNode(NodeKind::ATOM, Token{TokenKind::NIL, "nil", 0});
+}
+
+inline EvalResult REPLEnv::applyDo(const std::span<const TreeNode> nodes)
+{
+    if (nodes.empty())
+    {
+        // Q: Or maybe return nil?
+        std::string error_message = "ERROR: Cannot apply do to empty list";
+        return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
+    }
+
+    for (const auto node : nodes.first(nodes.size() - 1))
+    {
+        // TODO - Error handling?
+        evalAST(node, *this);
+    }
+
+    const auto& last = nodes[nodes.size() - 1];
+
+    return evalAST(last, *this);
 }
 
 inline EvalResult REPLEnv::applyIf(const std::span<const TreeNode> nodes)

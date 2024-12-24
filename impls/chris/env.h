@@ -29,7 +29,7 @@ public:
     {
         // TODO: Snazzy STL way to do this I am sure
         auto to_bind = std::min(binds.size(), exprs.size());
-        for (decltype(to_bind) i=0; i < to_bind; i++)
+        for (decltype(to_bind) i = 0; i < to_bind; i++)
         {
             set(binds[i], exprs[i]);
         }

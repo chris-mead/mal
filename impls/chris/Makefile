@@ -24,7 +24,8 @@ CFLAGS=$(OPT_FLAGS) --std=c++20 $(WARNFLAGS)
 LIB_SRCS:=lexer.cpp\
           parser.cpp\
           evaluator.cpp\
-          env.cpp
+          env.cpp\
+          core.cpp
 
 LIB_OBJS:=$(patsubst %.cpp,$(BUILD)/%.o,$(LIB_SRCS))
 
