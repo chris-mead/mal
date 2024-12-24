@@ -83,11 +83,6 @@ private:
         std::size_t pos{0};
         lex_char_t look_ahead{LEX_EOF};
 
-        lex_char_t peek() const
-        {
-            return look_ahead;
-        }
-
     public:
         LexerState(std::string_view text_) :
             text{text_}
@@ -104,6 +99,18 @@ private:
         void consume()
         {
             ++pos;
+            if (pos < text.length())
+                look_ahead = text[pos];
+            else
+                look_ahead = LEX_EOF;
+        }
+
+        void unconsume()
+        {
+            if (pos == 0)
+                return;
+
+            --pos;
             if (pos < text.length())
                 look_ahead = text[pos];
             else
@@ -154,11 +161,12 @@ private:
 
         Token minus()
         {
+            // This is a bit finicky as we need to look further ahead to
+            // disambiguate negative literal from symbol starting with '-'
             consume();
-            pos--;
-            look_ahead = '-';
-
-            if (isDigit(lookAhead()))
+            bool is_digit = isDigit(lookAhead());
+            unconsume();
+            if (is_digit)
             {
                 return number();
             }
@@ -166,8 +174,6 @@ private:
             {
                 return symbol();
             }
-
-            return number();
         }
 
         Token number()
