@@ -24,7 +24,7 @@ class REPLEnv
 
 public:
     REPLEnv();
-    EvalResult apply(std::string symbol, const std::span<const TreeNode> nodes);
+    EvalResult apply(const TreeNode& first, const std::span<const TreeNode> nodes);
 
     Environment& getCurrentEnv() const
     {
@@ -100,27 +100,46 @@ inline EvalResult addDefToEnv(const TreeNode& key, const TreeNode& val, REPLEnv&
     return evaluated;
 }
 
-inline EvalResult REPLEnv::apply(std::string symbol, const std::span<const TreeNode> nodes)
+inline EvalResult REPLEnv::apply(const TreeNode& first, const std::span<const TreeNode> nodes)
 {
-    // First check special forms
-    if (symbol == "def!")
+    if (isSymbol(first))
     {
-        return applyDef(nodes);
-    }
-    else if (symbol == "let*")
-    {
-        return applyLet(nodes);
-    }
-    else if (symbol == "if")
-    {
-        return applyIf(nodes);
-    }
-    else if (symbol == "do")
-    {
-        return applyDo(nodes);
+        auto symbol = first.symbol();
+        // First check special forms...
+        if (symbol == "def!")
+        {
+            return applyDef(nodes);
+        }
+        else if (symbol == "let*")
+        {
+            return applyLet(nodes);
+        }
+        else if (symbol == "if")
+        {
+            return applyIf(nodes);
+        }
+        else if (symbol == "do")
+        {
+            return applyDo(nodes);
+        }
+
+        // TODO... should this be part of symbol lookup?
     }
 
-    // TODO - ranges?
+    auto evaluated_func = evalAST(first, *this);
+    if (evaluated_func.error())
+        return evaluated_func;
+
+    if (!isFunc(evaluated_func.get()))
+    {
+        std::string error_message = "ERROR: Cannot call '" + evaluated_func.get().as_string + "'";
+        return EvalResult(error_message);
+    }
+
+    // Finally we have the callable!
+    const auto& func = evaluated_func.get().callable();
+
+    // Now eval the arguments
     std::vector<TreeNode> evaluated;
     for (auto it = std::begin(nodes); it != std::end(nodes); ++it)
     {
@@ -130,20 +149,7 @@ inline EvalResult REPLEnv::apply(std::string symbol, const std::span<const TreeN
         evaluated.push_back(eval_child.get());
     }
 
-    const auto* val = leaf_env->get(symbol);
-    if (!val)
-    {
-        std::string error_message = "ERROR: '" + symbol + "' not found";
-        return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
-    }
-    if (!isFunc(*val))
-    {
-        std::string error_message = "ERROR: Cannot call '" + symbol + "'";
-        return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
-    }
-
-    const auto& callable = val->callable();
-    return callable(evaluated);
+    return func(evaluated);
 }
 
 // Special Form application implementations
@@ -267,12 +273,10 @@ EvalResult inline evalAST(const TreeNode& node, REPLEnv& env)
             // Returns a _copy_
             return node;
         }
-        const auto& func = children[0];
-        std::vector<TreeNode> evaluated;
 
+        const auto& first = children[0];
         std::span rest{++std::begin(children), std::end(children)};
-        // TODO: Pass the func... consider lambdas!
-        return env.apply(func.symbol(), rest);
+        return env.apply(first, rest);
     }
     case NodeKind::VECTOR:
     case NodeKind::HASHMAP: {
