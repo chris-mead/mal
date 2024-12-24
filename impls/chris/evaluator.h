@@ -8,6 +8,8 @@
 
 #include <functional>
 #include <string>
+#include <span>
+#include <vector>
 
 using EvalResult = Result<TreeNode>;
 
@@ -19,7 +21,12 @@ class REPLEnv
     
 public:
     REPLEnv();
-    EvalResult apply(std::string symbol, const std::vector<TreeNode> nodes) const;
+    EvalResult apply(std::string symbol, const std::span<const TreeNode> nodes) const;
+
+    Environment& getCurrentEnv() const
+    {
+        return *leaf_env;
+    }
 };
 
 inline REPLEnv::REPLEnv()
@@ -95,11 +102,49 @@ inline REPLEnv::REPLEnv()
     
 }
 
-EvalResult inline REPLEnv::apply(std::string symbol, const std::vector<TreeNode> nodes) const
+EvalResult inline evalAST(const TreeNode& node, const REPLEnv& env);
+
+EvalResult inline REPLEnv::apply(std::string symbol, const std::span<const TreeNode> nodes) const
 {
+    // First check special forms
+    if (symbol == "def!")
+    {
+        if(nodes.size() != 2)
+        {
+            std::string error_message = "ERROR: def! without exactly 2 parameters";
+            return EvalResult(error_message, Token {TokenKind::NUMBER, "0", 0});
+        }
+        auto symbol = nodes[0];
+        auto rest = nodes[1];
+
+        if (symbol.token.kind != TokenKind::SYM)
+        {
+            std::string error_message = "ERROR: def! without symbol for first param";            
+            return EvalResult(error_message, symbol.token);
+        }
+
+        auto evaluated = evalAST(rest, *this);
+        if (evaluated.error())
+            return evaluated;
+
+        leaf_env->set(symbol.token.text, [evaluated](auto&) { return evaluated.get(); });
+
+        return evaluated.get();
+    }
+
+    // TODO - ranges?
+    std::vector<TreeNode> evaluated;
+    for(auto it = std::begin(nodes); it != std::end(nodes); ++it)
+    {
+        EvalResult eval_child = evalAST(*it, *this);
+        if(eval_child.error())
+            return eval_child;
+        evaluated.push_back(eval_child.get());
+    }
+    
     const auto* func = leaf_env->get(symbol);
     if (func)
-        return (*func)(nodes);
+        return (*func)(evaluated);
     std::string error_message = "ERROR: Could not find \"" + symbol + "\"";
     return EvalResult(error_message, Token {TokenKind::NUMBER, "0", 0});
 }
@@ -111,7 +156,21 @@ EvalResult inline evalAST(const TreeNode& node, const REPLEnv& env)
     case NodeKind::ROOT:
         return evalAST(node.children[0], env);
     case NodeKind::ATOM:
-        return node;
+        if (node.token.kind == TokenKind::SYM)
+        {
+            auto& cur_env = env.getCurrentEnv();
+            auto* res = cur_env.get(node.token.text);
+            if (res == nullptr)
+                return EvalResult("Could not resolve symbol", node.token);
+            // TODO - Replace with std::variant
+            std::vector<TreeNode> dummy;
+            auto* func = res;
+            return (*func)(dummy);
+        }
+        else
+        {
+            return node;
+        }
     case NodeKind::LIST: {
         if(node.children.empty())
         {
@@ -120,15 +179,9 @@ EvalResult inline evalAST(const TreeNode& node, const REPLEnv& env)
         }
         const auto& func = node.children[0];
         std::vector<TreeNode> evaluated;
-        for(auto it = ++std::begin(node.children); it != std::end(node.children); ++it)
-        {
-            EvalResult eval_child = evalAST(*it, env);
-            if(eval_child.error())
-                return eval_child;
 
-            evaluated.push_back(eval_child.get());
-        }
-        return env.apply(func.token.text, evaluated);
+        std::span rest{++std::begin(node.children), std::end(node.children)};
+        return env.apply(func.token.text, rest);
     }
     case NodeKind::VECTOR:
     case NodeKind::HASHMAP: {

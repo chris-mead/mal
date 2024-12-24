@@ -107,6 +107,7 @@ void printTree(std::ostream& out, const TreeNode& node)
 int mainLoop(const ConfigInfo& config_info)
 {
     InterpreterState state {config_info, &std::cin};
+    REPLEnv env;
     while(state.moreInput())
     {
         state.printPrompt();
@@ -128,15 +129,14 @@ int mainLoop(const ConfigInfo& config_info)
         else
         {
             const auto& root_node = parse_result.get();
-            REPLEnv env;
-            const auto result = evalAST(root_node, env);
-            if(result.error())
+            const auto eval_result = evalAST(root_node, env);
+            if(eval_result.error())
             {
-                std::cout << "ERROR: " << parse_result.message() << "\n";
+                std::cout << "ERROR: " << eval_result.message() << "\n";
             }
             else
             {
-                printTree(std::cout, result.get());
+                printTree(std::cout, eval_result.get());
             }
             std::cout << "\n";
         }
