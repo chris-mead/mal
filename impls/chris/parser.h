@@ -26,13 +26,13 @@ public:
     std::vector<TreeNode> children;
 
     TreeNode() :
-        kind {NodeKind::ROOT}
+        kind{NodeKind::ROOT}
     {
     }
 
     TreeNode(NodeKind kind_, Token token_) :
-        kind {kind_},
-        token {token_}
+        kind{kind_},
+        token{token_}
     {
     }
 
@@ -56,11 +56,11 @@ constexpr bool isEndAggregateDelim(const Token& tok)
 
 constexpr NodeKind getAggregateKind(const Token& tok)
 {
-    if(tok.kind == TokenKind::LPAREN || tok.kind == TokenKind::RPAREN)
+    if (tok.kind == TokenKind::LPAREN || tok.kind == TokenKind::RPAREN)
         return NodeKind::LIST;
-    else if(tok.kind == TokenKind::LBRACKET || tok.kind == TokenKind::RBRACKET)
+    else if (tok.kind == TokenKind::LBRACKET || tok.kind == TokenKind::RBRACKET)
         return NodeKind::VECTOR;
-    else if(tok.kind == TokenKind::LBRACE || tok.kind == TokenKind::RBRACE)
+    else if (tok.kind == TokenKind::LBRACE || tok.kind == TokenKind::RBRACE)
         return NodeKind::HASHMAP;
 
     // Should not happen!
@@ -73,19 +73,19 @@ class Parser
 public:
     ParseResult parse(TokenStream tok_stream)
     {
-        TreeNode root {};
+        TreeNode root{};
         TreeNode* node = &root;
 
         std::stack<TreeNode*> stack;
-        for(const Token& tok : tok_stream)
+        for (const Token& tok : tok_stream)
         {
-            if(tok.kind == TokenKind::INVALID)
+            if (tok.kind == TokenKind::INVALID)
             {
                 return {tok.text, tok};
             }
-            if(isStartAggregateDelim(tok))
+            if (isStartAggregateDelim(tok))
             {
-                if(node->kind == NodeKind::ROOT && !node->children.empty())
+                if (node->kind == NodeKind::ROOT && !node->children.empty())
                 {
                     return {"unbalanced (non-nested list start)", tok};
                 }
@@ -93,10 +93,10 @@ public:
                 stack.push(node);
                 node = &node->children.back();
             }
-            else if(isEndAggregateDelim(tok))
+            else if (isEndAggregateDelim(tok))
             {
                 const auto end_kind = getAggregateKind(tok);
-                if(node->kind != end_kind)
+                if (node->kind != end_kind)
                     return {"unbalanced aggregate-kind", tok};
                 assert(!stack.empty());
                 node = stack.top();
@@ -104,7 +104,7 @@ public:
             }
             else
             {
-                if(node->kind == NodeKind::ROOT && !node->children.empty())
+                if (node->kind == NodeKind::ROOT && !node->children.empty())
                 {
                     return {"unbalanced (Multiple-Atoms outside list)", tok};
                 }
@@ -112,11 +112,11 @@ public:
             }
         }
 
-        if(node->kind != NodeKind::ROOT)
+        if (node->kind != NodeKind::ROOT)
         {
             return {"unbalanced tree", node->token};
         }
-        if(node->children.empty())
+        if (node->children.empty())
         {
             return {"No tokens parsed", Token()};
         }

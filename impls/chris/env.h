@@ -15,14 +15,13 @@ class Environment
 {
     const Environment* outer{nullptr};
     std::unordered_map<std::string, Func> data;
-    
+
 public:
-    Environment() {};
+    Environment(){};
 
     Environment(const Environment* outer_) :
         outer{outer_}
     {
-        
     }
 
     void set(std::string symbol, Func node);
