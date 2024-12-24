@@ -1,0 +1,31 @@
+# We'll use defaults from the LLVM style, but with 4 columns indentation.
+# Force pointers to the type for C++.
+BasedOnStyle: Webkit
+IndentWidth: 4
+---
+Language:        Cpp
+DerivePointerAlignment: false
+PointerAlignment: Left
+BreakBeforeBraces: Custom
+BraceWrapping:   
+   AfterClass:      true
+   AfterControlStatement: true
+   AfterEnum:       true
+   AfterFunction:   true
+   AfterNamespace:  true
+   AfterObjCDeclaration: true
+   AfterStruct:     true
+   AfterUnion:      true
+   AfterExternBlock: true
+   BeforeCatch:     true
+   BeforeElse:      true
+   IndentBraces:    false
+   SplitEmptyFunction: false
+   SplitEmptyRecord: true
+   SplitEmptyNamespace: true
+Cpp11BracedListStyle: true  
+SpaceBeforeParens: Never
+AlwaysBreakTemplateDeclarations: false
+BreakConstructorInitializers: AfterColon
+SpaceAfterTemplateKeyword: false
+AlignAfterOpenBracket: true
