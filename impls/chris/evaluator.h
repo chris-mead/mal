@@ -9,28 +9,45 @@
 #include <functional>
 #include <string>
 #include <span>
+#include <stack>
 #include <vector>
 
 using EvalResult = Result<TreeNode>;
 
 class REPLEnv
 {
-    Environment root_env{};
+    std::stack<Environment> env_stack;
 
-    Environment* leaf_env = &root_env;
-    
+    Environment* leaf_env{nullptr};
 public:
     REPLEnv();
-    EvalResult apply(std::string symbol, const std::span<const TreeNode> nodes) const;
+    EvalResult apply(std::string symbol, const std::span<const TreeNode> nodes);
 
     Environment& getCurrentEnv() const
     {
         return *leaf_env;
     }
+
+    void pushEnv()
+    {
+        env_stack.emplace(leaf_env);
+        leaf_env = &env_stack.top();
+    }
+
+    void popEnv()
+    {
+        assert(env_stack.size() > 1);
+        env_stack.pop();
+        leaf_env = &env_stack.top();
+    }
 };
 
 inline REPLEnv::REPLEnv()
 {
+    env_stack.emplace();
+    leaf_env = &env_stack.top();
+    auto& root_env = *leaf_env;
+
     root_env.set("+", [](auto& nodes)
                       {
                           int acc = 0;
@@ -61,7 +78,7 @@ inline REPLEnv::REPLEnv()
                           }
                           return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
                       });
-    
+
     root_env.set("*", [](auto& nodes)
                       {
                           int acc = 1;
@@ -98,13 +115,30 @@ inline REPLEnv::REPLEnv()
                         }
                         return TreeNode(NodeKind::ATOM, Token {TokenKind::NUMBER, std::to_string(acc), 0});
                     });
-        
-    
+
+
 }
 
-EvalResult inline evalAST(const TreeNode& node, const REPLEnv& env);
+EvalResult inline evalAST(const TreeNode& node, REPLEnv& env);
 
-EvalResult inline REPLEnv::apply(std::string symbol, const std::span<const TreeNode> nodes) const
+EvalResult addDefToEnv(const TreeNode& key, const TreeNode& val, REPLEnv& env)
+{
+    if (key.token.kind != TokenKind::SYM)
+    {
+        std::string error_message = "ERROR: def! without symbol for first param";
+        return EvalResult(error_message, key.token);
+    }
+
+    auto evaluated = evalAST(val, env);
+    if (evaluated.error())
+        return evaluated;
+
+    env.getCurrentEnv().set(key.token.text, [evaluated](auto&) { return evaluated.get(); });
+
+    return evaluated;
+}
+
+EvalResult inline REPLEnv::apply(std::string symbol, const std::span<const TreeNode> nodes)
 {
     // First check special forms
     if (symbol == "def!")
@@ -114,22 +148,45 @@ EvalResult inline REPLEnv::apply(std::string symbol, const std::span<const TreeN
             std::string error_message = "ERROR: def! without exactly 2 parameters";
             return EvalResult(error_message, Token {TokenKind::NUMBER, "0", 0});
         }
-        auto symbol = nodes[0];
-        auto rest = nodes[1];
-
-        if (symbol.token.kind != TokenKind::SYM)
+        auto& key = nodes[0];
+        auto& val = nodes[1];
+        auto evaluated = addDefToEnv(key, val, *this);
+        return evaluated;
+    }
+    else if (symbol == "let*")
+    {
+        // Let's examine the children
+        if (nodes.size() != 2)
         {
-            std::string error_message = "ERROR: def! without symbol for first param";            
-            return EvalResult(error_message, symbol.token);
+            std::string error_message = "Empty let";
+            return EvalResult(error_message, Token {TokenKind::NUMBER, "0", 0});
+
+        }
+        auto& let_node = nodes[0];
+        auto& bindings = let_node.children;
+        auto& rest = nodes[1];
+        if (bindings.size() % 2 != 0)
+        {
+            std::string error_message = "Let bindings of uneven length";
+            return EvalResult(error_message, Token {TokenKind::NUMBER, "0", 0});
         }
 
-        auto evaluated = evalAST(rest, *this);
-        if (evaluated.error())
-            return evaluated;
+        pushEnv();
+        for(size_t i=0; i < bindings.size(); i+=2)
+        {
+            const auto& key = bindings[i];
+            const auto& val = bindings[i+1];
+            auto result = addDefToEnv(key, val, *this);
+            if (result.error())
+            {
+                return result;
+            }
+        }
 
-        leaf_env->set(symbol.token.text, [evaluated](auto&) { return evaluated.get(); });
+        auto result = evalAST(rest, *this);
+        popEnv();
 
-        return evaluated.get();
+        return result;
     }
 
     // TODO - ranges?
@@ -141,7 +198,7 @@ EvalResult inline REPLEnv::apply(std::string symbol, const std::span<const TreeN
             return eval_child;
         evaluated.push_back(eval_child.get());
     }
-    
+
     const auto* func = leaf_env->get(symbol);
     if (func)
         return (*func)(evaluated);
@@ -149,7 +206,7 @@ EvalResult inline REPLEnv::apply(std::string symbol, const std::span<const TreeN
     return EvalResult(error_message, Token {TokenKind::NUMBER, "0", 0});
 }
 
-EvalResult inline evalAST(const TreeNode& node, const REPLEnv& env)
+EvalResult inline evalAST(const TreeNode& node, REPLEnv& env)
 {
     switch(node.kind)
     {
