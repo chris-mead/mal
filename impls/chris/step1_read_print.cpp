@@ -20,6 +20,8 @@ enum class TokenKind
     RPAREN,
     SYM,
     NUMBER,
+    STRING,
+    BOOL,
     INVALID
 };
 
@@ -66,7 +68,12 @@ inline bool isDigit(lex_char_t c)
 
 inline bool isSymEnd(lex_char_t c)
 {
-    return isWS(c) || c == '(' || c == '(' || c == LEX_EOF;
+    return isWS(c) || c == '(' || c == ')' || c == LEX_EOF;
+}
+
+inline bool isStringDelim(lex_char_t c)
+{
+    return c == '"';
 }
 
 class Lexer
@@ -165,6 +172,36 @@ private:
             std::string_view tok_text = text.substr(tok_start, pos - tok_start);
             return Token{TokenKind::SYM, tok_text, tok_start};
         }
+
+        Token string()
+        {
+            const auto tok_start = pos;
+            consume();
+            auto pos_end = pos;
+            bool escaped{false};
+            while (escaped || !isStringDelim(lookAhead()) /*&& !lookAhead() == LEX_EOF*/)
+            {
+                if (lookAhead() == LEX_EOF)
+                {
+                    return Token(TokenKind::INVALID, "EOF in string", tok_start);
+                }
+                if (escaped)
+                {
+                    escaped = false;
+                }
+                else
+                {
+                    if (lookAhead() == '\\')
+                        escaped = true;
+                }
+                consume();
+            }
+            // Consume the end strng delimiter
+            consume();
+            // TODO: this _might_ be a keyword... in which case we need to promote it
+            std::string_view tok_text = text.substr(tok_start, pos - tok_start);
+            return Token{TokenKind::STRING, tok_text, tok_start};
+        }
     };
 public:
     TokenStream tokenise(std::string line)
@@ -206,6 +243,10 @@ public:
                 {
                     result.push_back(state.number());
                 }
+                else if (isStringDelim(c))
+                {
+                    result.push_back(state.string());
+                }
                 else
                 {
                     result.push_back(state.symbol());
@@ -223,11 +264,11 @@ public:
 
 enum class NodeKind
 {
+    ROOT,
     ATOM,
-    LIST,
-    ERROR
+    LIST
 };
-
+    
 // This will perform terribly... think about allocators
 class TreeNode
 {
@@ -236,12 +277,17 @@ public:
     Token token;
     std::vector<TreeNode> children;
 
+    TreeNode() :
+        kind{NodeKind::ROOT}
+    {
+
+    }
+    
     TreeNode(Token start_token_) :
         kind{NodeKind::LIST},
         token{start_token_},
         children{}
     {
-
     }
 
     TreeNode(NodeKind kind_, Token token_) :
@@ -250,7 +296,6 @@ public:
     {
         assert(kind != NodeKind::LIST);
     }
-
 
     void appendChild(const TreeNode& node)
     {
@@ -300,63 +345,53 @@ class Parser
 public:
     ParseResult parse(TokenStream tok_stream)
     {
-        std::stack<TreeNode> stack;
-
+        TreeNode root{};
+        TreeNode* node = &root;
+        
+        std::stack<TreeNode*> stack;
         for (const Token& tok: tok_stream)
         {
+            if (tok.kind == TokenKind::INVALID)
+            {
+                return {tok.text, tok};
+            }
             if (tok.kind == TokenKind::LPAREN)
             {
-                stack.emplace(tok);
+                if (node->kind == NodeKind::ROOT && !node->children.empty())
+                {
+                    return {"unbalanced (non-nested list start)", tok};
+                }
+                node->children.emplace_back(tok);
+                stack.push(node);
+                node = &node->children.back();
             }
             else if (tok.kind == TokenKind::RPAREN)
             {
-                if (stack.empty())
-                {
-                    return {"unbalanced RPAREN", tok};
-                }
-                TreeNode top = stack.top();
+                if (node->kind != NodeKind::LIST)
+                    return {"unbalacned r-paren", tok};
+                assert(!stack.empty());
+                node = stack.top();
                 stack.pop();
-                if (stack.empty())
-                {
-                    // TODO - Error if there's more tokens
-                    stack.push(top);
-                    break;
-                }
-                else
-                {
-                    stack.top().appendChild(top);
-                }
             }
             else
             {
-                if (stack.empty())
+                if (node->kind == NodeKind::ROOT && !node->children.empty())
                 {
-                    // TODO - Error if there's more tokens
-                    stack.emplace(NodeKind::ATOM, tok);
-                    break;
+                    return {"unbalanced (Multiple-Atoms outside list)", tok};
                 }
-                else
-                {
-                    const auto atom = TreeNode(NodeKind::ATOM, tok);
-                    stack.top().appendChild(atom);
-                }
+                node->children.emplace_back(NodeKind::ATOM, tok);
             }
         }
 
-        // TODO - Error handle this case...
-        if (stack.empty())
+        if (node->kind != NodeKind::ROOT)
+        {
+            return {"unbalanced tree", node->token};
+        }
+        if (node->children.empty())
         {
             return {"No tokens parsed", Token()};
         }
-        else if (stack.size() > 1)
-        {
-            return {"unbalanced", stack.top().token};
-            // Unbalanced
-        }
-        else
-        {
-            return {stack.top()};
-        }
+        return root;
     }
 };
 
@@ -400,7 +435,12 @@ public:
 
 void printTree(std::ostream& out, const TreeNode& node)
 {
-    if (node.kind == NodeKind::LIST)
+    if (node.kind == NodeKind::ROOT)
+    {
+        assert(!node.children.empty());
+        printTree(out, node.children[0]);
+    }
+    else if (node.kind == NodeKind::LIST)
     {
         out << "(";
         std::string sep = "";
