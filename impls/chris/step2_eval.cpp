@@ -238,6 +238,8 @@ int mainLoop(const ConfigInfo& config_info)
     {
         state.printPrompt();
         std::string line = state.readLine();
+        if (line.empty())
+            continue;
         Lexer lexer;
 
         auto tokens = lexer.tokenise(line);
@@ -265,7 +267,6 @@ int mainLoop(const ConfigInfo& config_info)
             }
             std::cout << "\n";
         }
-        std::cout << "\n";
     }
     return 0;
 }
