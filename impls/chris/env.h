@@ -1,9 +1,9 @@
 #ifndef ENV_H
 #define ENV_H
 
-#include "parser.h"
+#include "ast.h"
 
-#include <assert.h>
+#include <cassert>
 #include <functional>
 #include <memory>
 #include <string>

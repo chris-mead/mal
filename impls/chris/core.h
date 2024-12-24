@@ -1,7 +1,7 @@
 #ifndef CORE_H
 #define CORE_H
 
-#include "env.h"
+class Environment;
 
 void addCoreFunsToEnv(Environment& env);
 

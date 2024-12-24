@@ -1,6 +1,7 @@
 #ifndef EVALUATOR_H
 #define EVALUATOR_H
 
+#include "ast.h"
 #include "core.h"
 #include "env.h"
 #include "lexer.h"
@@ -161,24 +162,15 @@ inline EvalResult REPLEnv::applyDef(const std::span<const TreeNode> nodes)
 
 inline bool asBool(TreeNode& node)
 {
-    if (node.kind == NodeKind::ATOM)
-    {
-        if (isNil(node))
-            return false;
-        else if (isBool(node))
-            return node.symbol() == "true";
-        else
-            return true;
-    }
+    if (isNil(node) || (isBool(node) && !node.getBool()))
+        return false;
     else
-    {
         return true;
-    }
 }
 
 inline EvalResult makeNil()
 {
-    return TreeNode(NodeKind::ATOM, Token{TokenKind::NIL, "nil", 0});
+    return TreeNode::makeNode<NodeKind::NIL>("nil");
 }
 
 inline EvalResult REPLEnv::applyDo(const std::span<const TreeNode> nodes)
@@ -232,7 +224,7 @@ inline EvalResult REPLEnv::applyLet(const std::span<const TreeNode> nodes)
         return EvalResult(error_message, Token{TokenKind::NUMBER, "0", 0});
     }
     auto& let_node = nodes[0];
-    auto& bindings = let_node.children;
+    auto& bindings = let_node.children();
     auto& rest = nodes[1];
     if (bindings.size() % 2 != 0)
     {
@@ -260,44 +252,40 @@ EvalResult inline evalAST(const TreeNode& node, REPLEnv& env)
     switch (node.kind)
     {
     case NodeKind::ROOT:
-        return evalAST(node.children[0], env);
-    case NodeKind::ATOM:
-        if (isSymbol(node))
-        {
-            auto& cur_env = env.getCurrentEnv();
-            auto* res = cur_env.get(node.symbol());
-            if (res == nullptr)
-                return EvalResult("Could not resolve '" + node.symbol() + "'");
-            return *res;
-        }
-        else
-        {
-            return node;
-        }
+        return evalAST(node.children()[0], env);
+    case NodeKind::SYMBOL: {
+        auto& cur_env = env.getCurrentEnv();
+        auto* res = cur_env.get(node.symbol());
+        if (res == nullptr)
+            return EvalResult("Could not resolve '" + node.symbol() + "'");
+        return *res;
+    }
     case NodeKind::LIST: {
-        if (node.children.empty())
+        const auto& children = node.children();
+        if (children.empty())
         {
             // Returns a _copy_
             return node;
         }
-        const auto& func = node.children[0];
+        const auto& func = children[0];
         std::vector<TreeNode> evaluated;
 
-        std::span rest{++std::begin(node.children), std::end(node.children)};
+        std::span rest{++std::begin(children), std::end(children)};
         // TODO: Pass the func... consider lambdas!
         return env.apply(func.symbol(), rest);
     }
     case NodeKind::VECTOR:
     case NodeKind::HASHMAP: {
-        if (node.children.empty())
+        const auto& children = node.children();
+        if (children.empty())
         {
             // Returns a _copy_
             return node;
         }
         // TODO - Handle Hashmap sanely!
         std::vector<TreeNode> evaluated;
-        TreeNode result{node.kind, Token{TokenKind::LPAREN, node.symbol(), 0}};
-        for (const auto& child : node.children)
+        auto result = TreeNode::makeNode<NodeKind::VECTOR>("#VECTOR");
+        for (const auto& child : children)
         {
             EvalResult eval_child = evalAST(child, env);
             if (eval_child.error())
@@ -306,6 +294,13 @@ EvalResult inline evalAST(const TreeNode& node, REPLEnv& env)
         }
         return result;
     }
+    case NodeKind::STRING:
+    case NodeKind::NIL:
+    case NodeKind::BOOL:
+    case NodeKind::NUMBER:
+    case NodeKind::FUNC:
+        // Just values
+        return node;
     }
 
     assert(0 && "Should not happen");

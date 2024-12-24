@@ -1,6 +1,7 @@
 #include "evaluator.h"
 #include "lexer.h"
 #include "parser.h"
+#include "print.h"
 
 #include <cassert>
 #include <iostream>
@@ -54,65 +55,6 @@ public:
                   << val << "\n";
     }
 };
-
-void printTree(std::ostream& out, const TreeNode& node)
-{
-    if (node.kind == NodeKind::ROOT)
-    {
-        assert(!node.children.empty());
-        printTree(out, node.children[0]);
-    }
-    else if (node.kind == NodeKind::LIST)
-    {
-        out << "(";
-        std::string sep = "";
-        for (const auto& child : node.children)
-        {
-            out << sep;
-            printTree(out, child);
-            sep = " ";
-        }
-        out << ")";
-    }
-    else if (node.kind == NodeKind::VECTOR)
-    {
-        out << "[";
-        std::string sep = "";
-        for (const auto& child : node.children)
-        {
-            out << sep;
-            printTree(out, child);
-            sep = " ";
-        }
-        out << "]";
-    }
-    else if (node.kind == NodeKind::HASHMAP)
-    {
-        out << "{";
-        std::string sep = "";
-        for (const auto& child : node.children)
-        {
-            out << sep;
-            printTree(out, child);
-            sep = " ";
-        }
-        out << "}";
-    }
-    else if (node.kind == NodeKind::ATOM)
-    {
-        if (isBool(node))
-            out << node.symbol();
-        else if (isNil(node))
-            out << "nil";
-        else
-            out << node.symbol();
-    }
-    else
-    {
-        // Strictly speaking redundant
-        out << node.symbol();
-    }
-}
 
 int mainLoop(const ConfigInfo& config_info)
 {

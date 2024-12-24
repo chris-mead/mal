@@ -1,17 +1,24 @@
+
 #include "core.h"
+#include "ast.h"
+#include "env.h"
+#include "evaluator.h"
 
 void addCoreFunsToEnv(Environment& env)
 {
-    env.set("+", [](auto& nodes) {
+    Func_t add_impl = [](const auto& nodes) -> EvalResult {
         int acc = 0;
         for (const auto& node : nodes)
         {
-            auto num = std::atoi(node.token.text.c_str());
-            acc += num;
+            if (!isNumber(node))
+                return Result<TreeNode>("'" + node.as_string + "' not a number");
+            acc += node.getNumber();
         }
-        return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
-    });
-    env.set("-", [](auto& nodes) {
+        return TreeNode::makeNode<NodeKind::NUMBER>(acc, "NUM");
+    };
+    env.set("+", TreeNode::makeNode<NodeKind::FUNC>(add_impl, "#FUNC+"));
+
+    Func_t sub_impl = [](const auto& nodes) -> EvalResult {
         int acc;
         if (nodes.empty())
         {
@@ -20,28 +27,35 @@ void addCoreFunsToEnv(Environment& env)
         else
         {
             auto iter = std::begin(nodes);
-            acc = std::atoi(iter->token.text.c_str());
+            if (!isNumber(*iter))
+                return Result<TreeNode>("'" + iter->as_string + "' not a number");
+            acc = iter->getNumber();
             ++iter;
             while (iter != std::end(nodes))
             {
-                acc -= std::atoi(iter->token.text.c_str());
+                if (!isNumber(*iter))
+                    return Result<TreeNode>("'" + iter->as_string + "' not a number");
+                acc -= iter->getNumber();
                 ++iter;
             }
         }
-        return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
-    });
+        return TreeNode::makeNode<NodeKind::NUMBER>(acc, std::to_string(acc));
+    };
+    env.set("-", TreeNode::makeNode<NodeKind::FUNC>(sub_impl, "#FUNC-"));
 
-    env.set("*", [](auto& nodes) {
+    Func_t mul_impl = [](const auto& nodes) -> EvalResult {
         int acc = 1;
         for (const auto& node : nodes)
         {
-            auto num = std::atoi(node.token.text.c_str());
-            acc *= num;
+            if (!isNumber(node))
+                return Result<TreeNode>("'" + node.as_string + "' not a number");
+            acc *= node.getNumber();
         }
-        return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
-    });
+        return TreeNode::makeNode<NodeKind::NUMBER>(acc, std::to_string(acc));
+    };
+    env.set("*", TreeNode::makeNode<NodeKind::FUNC>(mul_impl, "#FUNC*"));
 
-    env.set("/", [](auto& nodes) {
+    Func_t div_impl = [](const auto& nodes) -> EvalResult {
         int acc;
         if (nodes.size() < 2)
         {
@@ -50,36 +64,41 @@ void addCoreFunsToEnv(Environment& env)
         else
         {
             auto iter = std::begin(nodes);
-            acc = std::atoi(iter->token.text.c_str());
+            if (!isNumber(*iter))
+                return Result<TreeNode>("'" + iter->as_string + "' not a number");
+            acc = iter->getNumber();
             ++iter;
             while (iter != std::end(nodes))
             {
-                int denom = std::atoi(iter->token.text.c_str());
-                // TODO - Divide by zero
-                // if(denom == 0)
-                //     return EvalResult{"Divide by 0", Token{TokenKind::NUMBER, "0", 0}};
+                if (!isNumber(*iter))
+                    return Result<TreeNode>("'" + iter->as_string + "' not a number");
 
+                int denom = iter->getNumber();
+
+                if (denom == 0)
+                    return EvalResult{"Division by 0"};
                 acc /= denom;
                 ++iter;
             }
         }
-        return TreeNode(NodeKind::ATOM, Token{TokenKind::NUMBER, std::to_string(acc), 0});
-    });
+        return TreeNode::makeNode<NodeKind::NUMBER>(acc, std::to_string(acc));
+    };
+    env.set("/", TreeNode::makeNode<NodeKind::FUNC>(div_impl, "#FUNC/"));
 
-    env.set(">", [](auto& nodes) {
-        if (nodes.size() < 2)
-        {
-        }
-    });
+    // env.set(">", [](auto& nodes) {
+    //     if (nodes.size() < 2)
+    //     {
+    //     }
+    //     });
 }
 
-template<T, std::string NAME>
-TreeNode BinaryNumericOp(auto& nodes)
-{
-    if (nodes.size() != 2)
-    {
-        return "Cannot apply " + name + " with " + nodes.size() + "operands";
-    }
+// template<T, std::string NAME>
+// TreeNode BinaryNumericOp(auto& nodes)
+// {
+//     if (nodes.size() != 2)
+//     {
+//         return "Cannot apply " + name + " with " + nodes.size() + "operands";
+//     }
 
-    return
-};
+//     return
+// };

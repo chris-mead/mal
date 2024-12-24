@@ -21,11 +21,13 @@ DEPFLAGS = -MT $@ -MMD -MP -MF $(BUILD)/$*.d
 WARNFLAGS:=-Wall -Wextra -Wextra -pedantic
 CFLAGS=$(OPT_FLAGS) --std=c++20 $(WARNFLAGS)
 
-LIB_SRCS:=lexer.cpp\
-          parser.cpp\
-          evaluator.cpp\
-          env.cpp\
-          core.cpp
+LIB_SRCS:=ast.cpp\
+	  core.cpp\
+	  env.cpp\
+	  evaluator.cpp\
+	  lexer.cpp\
+	  parser.cpp\
+          print.cpp
 
 LIB_OBJS:=$(patsubst %.cpp,$(BUILD)/%.o,$(LIB_SRCS))
 

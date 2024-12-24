@@ -1,5 +1,6 @@
 #include "lexer.h"
 #include "parser.h"
+#include "print.h"
 
 #include <cassert>
 #include <iostream>
@@ -54,55 +55,6 @@ public:
     }
 };
 
-void printTree(std::ostream& out, const TreeNode& node)
-{
-    if (node.kind == NodeKind::ROOT)
-    {
-        assert(!node.children.empty());
-        printTree(out, node.children[0]);
-    }
-    else if (node.kind == NodeKind::LIST)
-    {
-        out << "(";
-        std::string sep = "";
-        for (const auto& child : node.children)
-        {
-            out << sep;
-            printTree(out, child);
-            sep = " ";
-        }
-        out << ")";
-    }
-    else if (node.kind == NodeKind::VECTOR)
-    {
-        out << "[";
-        std::string sep = "";
-        for (const auto& child : node.children)
-        {
-            out << sep;
-            printTree(out, child);
-            sep = " ";
-        }
-        out << "]";
-    }
-    else if (node.kind == NodeKind::HASHMAP)
-    {
-        out << "{";
-        std::string sep = "";
-        for (const auto& child : node.children)
-        {
-            out << sep;
-            printTree(out, child);
-            sep = " ";
-        }
-        out << "}";
-    }
-    else
-    {
-        out << node.token.text;
-    }
-}
-
 int mainLoop(const ConfigInfo& config_info)
 {
     InterpreterState state{config_info, &std::cin};
@@ -126,7 +78,6 @@ int mainLoop(const ConfigInfo& config_info)
         {
             const auto& root_node = parse_result.get();
             printTree(std::cout, root_node);
-            std::cout << "\n";
         }
         std::cout << "\n";
     }

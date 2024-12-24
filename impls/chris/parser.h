@@ -1,7 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "evaluator.h"
+#include "ast.h"
 #include "lexer.h"
 #include "result.h"
 
@@ -10,98 +10,6 @@
 #include <optional>
 #include <stack>
 #include <vector>
-
-enum class NodeKind
-{
-    ROOT,
-    ATOM,
-    LIST,
-    VECTOR,
-    HASHMAP
-};
-
-// This will perform terribly... think about allocators
-class TreeNode
-{
-public:
-    NodeKind kind;
-    std::vector<TreeNode> children;
-
-    std::string name;
-
-private:
-    std::optional<Token> token;
-
-public:
-    TreeNode() :
-        kind{NodeKind::ROOT},
-        name{"ROOT"}
-    {
-    }
-
-    TreeNode(NodeKind kind_, Token token_) :
-        kind{kind_},
-        name{token_.text},
-        token{token_}
-    {
-    }
-
-    void appendChild(const TreeNode& node)
-    {
-        children.push_back(node);
-    }
-
-    auto symbol() const
-    {
-        return name;
-    }
-
-    std::function<Result<TreeNode>(const std::vector<TreeNode>)> callable() const
-    {
-        return [](const std::vector<TreeNode>) { return Result<TreeNode>("Not implemented yet"); };
-    }
-
-    auto getToken() const
-    {
-        return token;
-    }
-
-    friend bool isSymbol(const TreeNode& node);
-
-    friend bool isFunc(const TreeNode& node);
-
-    friend bool isBool(const TreeNode& node);
-
-    friend bool isNumber(const TreeNode& node);
-
-    friend bool isNil(const TreeNode& node);
-};
-
-inline bool isSymbol(const TreeNode& node)
-{
-    return node.token->kind == TokenKind::SYM;
-}
-
-inline bool isFunc(const TreeNode& node)
-{
-    (void)node;
-    return false; //    return node.token.kind == TokenKind:;
-}
-
-inline bool isBool(const TreeNode& node)
-{
-    return node.token->kind != TokenKind::BOOL;
-}
-
-inline bool isNumber(const TreeNode& node)
-{
-    return node.token->kind != TokenKind::NUMBER;
-}
-
-inline bool isNil(const TreeNode& node)
-{
-    return node.token->kind != TokenKind::NIL;
-}
 
 using ParseResult = Result<TreeNode>;
 
@@ -146,13 +54,32 @@ public:
             }
             if (isStartAggregateDelim(tok))
             {
-                if (node->kind == NodeKind::ROOT && !node->children.empty())
+                if (isRoot(*node) && !node->empty())
                 {
                     return {"unbalanced (non-nested list start)", tok};
                 }
-                node->children.emplace_back(getAggregateKind(tok), tok);
+                // TODO - Vector + Hashmap
+                auto new_node = TreeNode::makeNode<NodeKind::NIL>("nil");
+                if (tok.kind == TokenKind::LPAREN)
+                {
+                    new_node = TreeNode::makeNode<NodeKind::LIST>(tok);
+                }
+                else if (tok.kind == TokenKind::LBRACKET)
+                {
+                    new_node = TreeNode::makeNode<NodeKind::VECTOR>(tok);
+                }
+                else if (tok.kind == TokenKind::LBRACE)
+                {
+                    new_node = TreeNode::makeNode<NodeKind::HASHMAP>(tok);
+                }
+                else
+                {
+                    return {"unknown aggregate type", tok};
+                }
+
+                node->appendChild(new_node);
                 stack.push(node);
-                node = &node->children.back();
+                node = &node->children().back();
             }
             else if (isEndAggregateDelim(tok))
             {
@@ -165,11 +92,42 @@ public:
             }
             else
             {
-                if (node->kind == NodeKind::ROOT && !node->children.empty())
+                if (node->kind == NodeKind::ROOT && !node->empty())
                 {
                     return {"unbalanced (Multiple-Atoms outside list)", tok};
                 }
-                node->children.emplace_back(NodeKind::ATOM, tok);
+                auto new_node = TreeNode::makeNode<NodeKind::NIL>("nil");
+                switch (tok.kind)
+                {
+                case TokenKind::SYM:
+                    new_node = TreeNode::makeNode<NodeKind::SYMBOL>(tok.text, tok);
+                    break;
+                case TokenKind::NUMBER: {
+                    // TODO : refactor to be numeric type
+                    auto n = std::atoi(tok.text.c_str());
+                    new_node = TreeNode::makeNode<NodeKind::NUMBER>(n, tok);
+                    break;
+                }
+                case TokenKind::STRING: {
+                    new_node = TreeNode::makeNode<NodeKind::STRING>(tok.text, tok);
+                    break;
+                }
+                case TokenKind::BOOL: {
+                    bool b = tok.text == "true";
+                    new_node = TreeNode::makeNode<NodeKind::BOOL>(b, tok);
+                    break;
+                }
+                case TokenKind::NIL:
+                    // See default above
+                    break;
+                case TokenKind::INVALID:
+                default:
+                    // TODO - ERROR HERE!
+                    // Shouldn't happen
+                    break;
+                }
+                // TODO : std::move?
+                node->appendChild(new_node);
             }
         }
 
@@ -178,7 +136,7 @@ public:
             // TODO - Improve this...o
             return {"unbalanced tree", Token()};
         }
-        if (node->children.empty())
+        if (node->empty())
         {
             return {"No tokens parsed", Token()};
         }
